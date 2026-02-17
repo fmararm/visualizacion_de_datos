@@ -1,10 +1,11 @@
 import pandas as pd
+import numpy as np
 import plotnine as p9
 from dagster import asset
 
 @asset
 def renta_load():
-    renta = pd.read_csv("distribucion-renta-canarias.csv")
+    renta = pd.read_csv("data/distribucion-renta-canarias.csv")
     return renta
 
 @asset(deps=[renta_load])
@@ -36,20 +37,6 @@ def renta_cleaning(renta_load):
     return renta
 
 @asset(deps=[renta_cleaning])
-def renta_visualizations(renta_cleaning):
-    # Create a simple line plot
-    plot = (
-        p9.ggplot(renta_cleaning, p9.aes(x='year', y='value', color='region'))
-        + p9.geom_line()
-        + p9.labs(title='Renta distribution over time by region', y='Value', x='Year')
-        + p9.theme_minimal()
-    )
-    # Save the plot (optional, but good for verification)
-    plot.save("renta_plot_region.png")
-    
-    return plot
-
-@asset(deps=[renta_cleaning])
 def evolution_stacked_area_plot(renta_cleaning):
     # Filter for TERRITORIO#es == 'Canarias'
     df = renta_cleaning[renta_cleaning['region'] == 'Canarias']
@@ -61,25 +48,68 @@ def evolution_stacked_area_plot(renta_cleaning):
         + p9.labs(title='Evolution of Income Categories in Canarias', y='Value', x='Year', fill='Measure')
         + p9.theme_minimal()
     )
-    plot.save("evolution_stacked_area_plot.png")
-    return plot
+    plot.save("plots/evolution_stacked_area_plot.png")
+    plot.save("plots/evolution_stacked_area_plot.png")
+    return "plots/evolution_stacked_area_plot.png"
 
 @asset(deps=[renta_cleaning])
-def income_variance_boxplot(renta_cleaning):
-    # Filter for the most recent year
-    max_year = renta_cleaning['year'].max()
-    df = renta_cleaning[renta_cleaning['year'] == max_year]
+def income_composition_stacked_bar(renta_cleaning):
+    # Filter for the 7 main islands and the most recent year
+    main_islands = ['Lanzarote', 'Fuerteventura', 'Gran Canaria', 'Tenerife', 'La Gomera', 'La Palma', 'El Hierro']
+    df = renta_cleaning[(renta_cleaning['year'] == 2023) & (renta_cleaning['region'].isin(main_islands))]
     
-    # Create a boxplot showing the distribution of OBS_VALUE across all territories, grouped by MEDIDAS#es
     plot = (
-        p9.ggplot(df, p9.aes(x='measure', y='value', fill='measure'))
-        + p9.geom_boxplot()
-        + p9.labs(title=f'Income Variance Boxplot ({max_year})', y='Value', x='Measure')
+        p9.ggplot(df, p9.aes(x='region', y='value', fill='measure'))
+        + p9.geom_bar(stat='identity', position='fill') # 'fill' makes it 100% stacked
+        + p9.scale_y_continuous(labels=lambda l: [f"{int(x*100)}%" for x in l])
+        + p9.labs(title='Income Composition by Island (2023)', x='', y='Percentage Share', fill='Source')
         + p9.theme_minimal()
         + p9.theme(axis_text_x=p9.element_text(rotation=45, hjust=1))
     )
-    plot.save("income_variance_boxplot.png")
-    return plot
+    plot.save("plots/income_composition_stacked_bar.png")
+    return "plots/income_composition_stacked_bar.png"
+
+@asset(deps=[renta_cleaning])
+def wage_deviation_from_avg(renta_cleaning):
+    # 1. Get regional average for 2023
+    avg_val = 61.2 
+    
+    # 2. Filter for municipalities in 2023 for Wages
+    df = renta_cleaning[(renta_cleaning['year'] == 2023) & 
+                        (renta_cleaning['measure'] == 'Sueldos y salarios') &
+                        (~renta_cleaning['region'].isin(['Canarias', 'Las Palmas', 'Santa Cruz de Tenerife']))]
+    
+    # 3. Calculate deviation
+    df['deviation'] = df['value'] - avg_val
+    df = df.sort_values('deviation').iloc[np.r_[0:10, -10:0]] # Top 10 and Bottom 10
+    
+    plot = (
+        p9.ggplot(df, p9.aes(x='reorder(region, deviation)', y='deviation', fill='deviation > 0'))
+        + p9.geom_col()
+        + p9.coord_flip()
+        + p9.scale_fill_manual(values={True: "#2ecc71", False: "#e74c3c"})
+        + p9.labs(title='Wage Share: Deviation from Canarias Average (61.2%)', 
+                  subtitle='Top and Bottom 10 Municipalities', x='', y='Percentage Points +/- Avg')
+        + p9.theme_minimal()
+        + p9.theme(legend_position='none')
+    )
+    plot.save("plots/wage_deviation_chart.png")
+    return "plots/wage_deviation_chart.png"
+
+@asset(deps=[renta_cleaning])
+def income_distribution_violin(renta_cleaning):
+    df = renta_cleaning[renta_cleaning['year'] == 2023]
+    
+    plot = (
+        p9.ggplot(df, p9.aes(x='measure', y='value', fill='measure'))
+        + p9.geom_violin(alpha=0.3) # Shows density/shape
+        + p9.geom_boxplot(width=0.1, outlier_size=0.5) # Keeps the summary stats
+        + p9.labs(title='Density of Income Distribution by Category (2023)', x='', y='Value (%)')
+        + p9.theme_minimal()
+        + p9.theme(legend_position='none', axis_text_x=p9.element_text(rotation=45, hjust=1))
+    )
+    plot.save("plots/income_distribution_violin.png")
+    return "plots/income_distribution_violin.png"
 
 @asset(deps=[renta_cleaning])
 def top_wage_municipalities_bar(renta_cleaning):
@@ -104,8 +134,8 @@ def top_wage_municipalities_bar(renta_cleaning):
         + p9.labs(title=f'Top 10 Municipalities by Wage Share ({max_year})', y='Value', x='Municipality')
         + p9.theme_minimal()
     )
-    plot.save("top_wage_municipalities_bar.png")
-    return plot
+    plot.save("plots/top_wage_municipalities_bar.png")
+    return "plots/top_wage_municipalities_bar.png"
 
 @asset(deps=[renta_cleaning])
 def unemployment_trend_faceted(renta_cleaning):
@@ -125,9 +155,10 @@ def unemployment_trend_faceted(renta_cleaning):
         + p9.theme_minimal()
         + p9.theme(legend_position='none') # Hide legend since facet shows name
     )
-    plot.save("unemployment_trend_faceted.png")
-    return plot
+    plot.save("plots/unemployment_trend_faceted.png")
+    return "plots/unemployment_trend_faceted.png"
 
+# GOOD
 @asset(deps=[renta_cleaning])
 def income_composition_heatmap(renta_cleaning):
     # Filter for 'Pensiones'
@@ -150,8 +181,8 @@ def income_composition_heatmap(renta_cleaning):
         + p9.theme_minimal()
         + p9.scale_fill_gradient(low="white", high="red")
     )
-    plot.save("income_composition_heatmap.png")
-    return plot
+    plot.save("plots/income_composition_heatmap.png")
+    return "plots/income_composition_heatmap.png"
 
 @asset(deps=[renta_cleaning])
 def wages_vs_pensions_correlation(renta_cleaning):
@@ -182,8 +213,8 @@ def wages_vs_pensions_correlation(renta_cleaning):
         )
         + p9.theme_minimal()
     )
-    plot.save("wages_vs_pensions_correlation.png")
-    return plot
+    plot.save("plots/wages_vs_pensions_correlation.png")
+    return "plots/wages_vs_pensions_correlation.png"
 
 @asset(deps=[renta_cleaning])
 def pension_growth_ranking(renta_cleaning):
@@ -223,8 +254,8 @@ def pension_growth_ranking(renta_cleaning):
         )
         + p9.theme_minimal()
     )
-    plot.save("pension_growth_ranking.png")
-    return plot
+    plot.save("plots/pension_growth_ranking.png")
+    return "plots/pension_growth_ranking.png"
 
 # Nivel Estudios Pipeline
 
@@ -232,7 +263,7 @@ def pension_growth_ranking(renta_cleaning):
 def nivel_estudios_load():
     # Read the excel file
     # Note: openpyxl is required and was installed
-    return pd.read_excel("nivelestudios.xlsx")
+    return pd.read_excel("data/nivelestudios.xlsx")
 
 @asset(deps=[nivel_estudios_load])
 def nivel_estudios_cleaning(nivel_estudios_load):
@@ -264,28 +295,20 @@ def nivel_estudios_cleaning(nivel_estudios_load):
     return df
 
 @asset(deps=[nivel_estudios_cleaning])
-def education_level_distribution(nivel_estudios_cleaning):
-    # Filter for most recent year
+def education_ranking_dotplot(nivel_estudios_cleaning):
     max_year = nivel_estudios_cleaning['year'].max()
-    df = nivel_estudios_cleaning[nivel_estudios_cleaning['year'] == max_year]
+    df_agg = nivel_estudios_cleaning[nivel_estudios_cleaning['year'] == max_year].groupby('education_level', as_index=False)['total'].sum()
     
-    # Group by education_level and sum total
-    df_agg = df.groupby('education_level', as_index=False)['total'].sum()
-    
-    # Bar chart
     plot = (
         p9.ggplot(df_agg, p9.aes(x='reorder(education_level, total)', y='total'))
-        + p9.geom_col(fill='purple')
+        + p9.geom_segment(p9.aes(xend='reorder(education_level, total)', yend=0), color='lightgrey') # The "stem"
+        + p9.geom_point(size=4, color='purple')
         + p9.coord_flip()
-        + p9.labs(
-            title=f'Students by Education Level ({max_year})', 
-            x='Education Level', 
-            y='Total Students'
-        )
+        + p9.labs(title=f'Ranking of Education Levels ({max_year})', x='', y='Total Students')
         + p9.theme_minimal()
     )
-    plot.save("education_level_distribution.png")
-    return plot
+    plot.save("plots/education_dotplot.png")
+    return "plots/education_dotplot.png"
 
 @asset(deps=[nivel_estudios_cleaning])
 def education_evolution_top_municipalities(nivel_estudios_cleaning):
@@ -319,5 +342,5 @@ def education_evolution_top_municipalities(nivel_estudios_cleaning):
         )
         + p9.theme_minimal()
     )
-    plot.save("education_evolution_top_municipalities.png")
-    return plot
+    plot.save("plots/education_evolution_top_municipalities.png")
+    return "plots/education_evolution_top_municipalities.png"
