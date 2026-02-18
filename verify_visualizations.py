@@ -2,14 +2,15 @@ import pandas as pd
 import plotnine as p9
 import os
 from lab_renta import (
-    renta_load, renta_cleaning, evolution_stacked_area_plot, 
-    income_composition_stacked_bar, wage_deviation_from_avg, income_distribution_violin, 
-    top_wage_municipalities_bar, unemployment_trend_by_region, income_composition_heatmap, 
-    wages_vs_pensions_correlation, pension_growth_ranking, 
-    nivel_estudios_load, nivel_estudios_cleaning, education_ranking_dotplot, 
-    education_evolution_top_municipalities, vega_dashboard_creation,
-    gender_composition_stacked_bar, nationality_impact_diverging_bar,
-    education_intensity_heatmap, higher_ed_gender_gap_lollipop, education_level_ridge_plot
+    renta_load, renta_cleaning, 
+    income_composition_stacked_bar, wage_deviation_from_avg, income_distribution_boxplot, 
+    unemployment_trend_by_region, income_composition_heatmap, 
+    nivel_estudios_load, nivel_estudios_cleaning,
+    gender_composition_stacked_bar,
+    education_intensity_heatmap, higher_ed_gender_gap_diverging_bar, education_level_ridge_plot,
+    gender_proportion_bar, nationality_proportion_bar,
+    education_level_proportion_bar, higher_ed_by_island_bar,
+    top_foreign_students_municipalities_bar
 )
 
 def run_verification():
@@ -21,13 +22,11 @@ def run_verification():
     print("Columns in clean data:", clean_renta.columns)
     
     # Create plots directory
-    for d in ["plots", "plots/income", "plots/education"]:
+    for d in ["plots", "plots/income", "plots/education", "plots/combination"]:
         if not os.path.exists(d):
             os.makedirs(d)
         
-    print("Generating evolution_stacked_area_plot...")
-    res = evolution_stacked_area_plot(clean_renta)
-    print(f"Result: {res}")
+
     
     print("Generating income_composition_stacked_bar...")
     res = income_composition_stacked_bar(clean_renta)
@@ -37,12 +36,8 @@ def run_verification():
     res = wage_deviation_from_avg(clean_renta)
     print(f"Result: {res}")
     
-    print("Generating income_distribution_violin...")
-    res = income_distribution_violin(clean_renta)
-    print(f"Result: {res}")
-    
-    print("Generating top_wage_municipalities_bar...")
-    res = top_wage_municipalities_bar(clean_renta)
+    print("Generating income_distribution_boxplot...")
+    res = income_distribution_boxplot(clean_renta)
     print(f"Result: {res}")
     
     print("Generating unemployment_trend_by_region...")
@@ -52,14 +47,11 @@ def run_verification():
     print("Generating income_composition_heatmap...")
     res = income_composition_heatmap(clean_renta)
     print(f"Result: {res}")
+    
+    print("Unique Renta Measures:")
+    print(clean_renta['measure'].unique())
+    
 
-    print("Generating wages_vs_pensions_correlation...")
-    res = wages_vs_pensions_correlation(clean_renta)
-    print(f"Result: {res}")
-
-    print("Generating pension_growth_ranking...")
-    res = pension_growth_ranking(clean_renta)
-    print(f"Result: {res}")
     
     # Nivel Estudios Verification
     print("Loading nivel estudios...")
@@ -67,36 +59,47 @@ def run_verification():
     print("Cleaning nivel estudios...")
     ne_clean = nivel_estudios_cleaning(ne_load)
     
-    print("Generating education_ranking_dotplot...")
-    res = education_ranking_dotplot(ne_clean)
-    print(f"Result: {res}")
+    print("Unique Municipalities in Data:")
+    print(sorted(ne_clean['municipality'].unique()))
     
-    print("Generating education_evolution_top_municipalities...")
-    res = education_evolution_top_municipalities(ne_clean)
+    print("Generating top_foreign_students_municipalities_bar...")
+    res = top_foreign_students_municipalities_bar(ne_clean)
     print(f"Result: {res}")
 
-    print("Generating vega_dashboard_creation...")
-    res = vega_dashboard_creation(ne_clean)
-    print(f"Result: {res}")
+
 
     print("Generating gender_composition_stacked_bar...")
     res = gender_composition_stacked_bar(ne_clean)
     print(f"Result: {res}")
     
-    print("Generating nationality_impact_diverging_bar...")
-    res = nationality_impact_diverging_bar(ne_clean)
-    print(f"Result: {res}")
+
     
     print("Generating education_intensity_heatmap...")
     res = education_intensity_heatmap(ne_clean)
     print(f"Result: {res}")
     
-    print("Generating higher_ed_gender_gap_lollipop...")
-    res = higher_ed_gender_gap_lollipop(ne_clean)
+    print("Generating higher_ed_gender_gap_diverging_bar...")
+    res = higher_ed_gender_gap_diverging_bar(ne_clean)
     print(f"Result: {res}")
     
     print("Generating education_level_ridge_plot...")
     res = education_level_ridge_plot(ne_clean)
+    print(f"Result: {res}")
+    
+    print("Generating gender_proportion_bar...")
+    res = gender_proportion_bar(ne_clean)
+    print(f"Result: {res}")
+    
+    print("Generating nationality_proportion_bar...")
+    res = nationality_proportion_bar(ne_clean)
+    print(f"Result: {res}")
+    
+    print("Generating education_level_proportion_bar...")
+    res = education_level_proportion_bar(ne_clean)
+    print(f"Result: {res}")
+    
+    print("Generating higher_ed_by_island_bar...")
+    res = higher_ed_by_island_bar(ne_clean)
     print(f"Result: {res}")
     
     print("All plots generated successfully (saved directly by assets to plots/ directory).")

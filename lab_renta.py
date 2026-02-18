@@ -83,19 +83,18 @@ def wage_deviation_from_avg(renta_cleaning):
     return "plots/income/wage_deviation_chart.png"
 
 @asset(deps=[renta_cleaning])
-def income_distribution_violin(renta_cleaning):
+def income_distribution_boxplot(renta_cleaning):
     df = renta_cleaning[renta_cleaning['year'] == 2023]
     
     plot = (
         p9.ggplot(df, p9.aes(x='measure', y='value', fill='measure'))
-        + p9.geom_violin(alpha=0.3) # Shows density/shape
-        + p9.geom_boxplot(width=0.1, outlier_size=0.5) # Keeps the summary stats
-        + p9.labs(title='Density of Income Distribution by Category (2023)', x='', y='Value (%)')
+        + p9.geom_boxplot() # Just a boxplot
+        + p9.labs(title='Income Distribution by Category (2023)', x='', y='Value (%)')
         + p9.theme_minimal()
         + p9.theme(legend_position='none', axis_text_x=p9.element_text(rotation=45, hjust=1))
     )
-    plot.save("plots/income/income_distribution_violin.png")
-    return "plots/income/income_distribution_violin.png"
+    plot.save("plots/income/income_distribution_boxplot.png")
+    return "plots/income/income_distribution_boxplot.png"
 
 @asset(deps=[renta_cleaning])
 def unemployment_trend_by_region(renta_cleaning):
@@ -226,116 +225,42 @@ def nivel_estudios_cleaning(nivel_estudios_load):
     return df
 
 @asset(deps=[nivel_estudios_cleaning])
-def education_ranking_dotplot(nivel_estudios_cleaning):
+def top_foreign_students_municipalities_bar(nivel_estudios_cleaning):
     max_year = nivel_estudios_cleaning['year'].max()
-    df_agg = nivel_estudios_cleaning[nivel_estudios_cleaning['year'] == max_year].groupby('education_level', as_index=False)['total'].sum()
     
-    plot = (
-        p9.ggplot(df_agg, p9.aes(x='reorder(education_level, total)', y='total'))
-        + p9.geom_segment(p9.aes(xend='reorder(education_level, total)', yend=0), color='lightgrey') # The "stem"
-        + p9.geom_point(size=4, color='purple')
-        + p9.coord_flip()
-        + p9.labs(title=f'Ranking of Education Levels ({max_year})', x='', y='Total Students')
-        + p9.theme_minimal()
-    )
-    plot.save("plots/education/education_dotplot.png")
-    return "plots/education/education_dotplot.png"
+    # Filter for Foreign students, Total Sex, All levels (summed)
+    # Check nationality column existence
+    if 'nationality' not in nivel_estudios_cleaning.columns:
+        return "Skipped: Nationality column missing"
 
-@asset(deps=[nivel_estudios_cleaning])
-def education_evolution_top_municipalities(nivel_estudios_cleaning):
-    # Select top 5 municipalities by total students in most recent year
-    max_year = nivel_estudios_cleaning['year'].max()
-    
-    top_munis = (
-        nivel_estudios_cleaning[nivel_estudios_cleaning['year'] == max_year]
-        .groupby('municipality')['total']
-        .sum()
-        .sort_values(ascending=False)
-        .head(5)
-        .index.tolist()
-    )
-    
-    # Filter data for these municipalities
-    df = nivel_estudios_cleaning[nivel_estudios_cleaning['municipality'].isin(top_munis)]
-    
-    # Aggregate total students per municipality per year
-    df_agg = df.groupby(['year', 'municipality'], as_index=False)['total'].sum()
-    
-    # Line chart
-    plot = (
-        p9.ggplot(df_agg, p9.aes(x='year', y='total', color='municipality'))
-        + p9.geom_line(size=1.2)
-        + p9.labs(
-            title='Evolution of Students in Top 5 Municipalities', 
-            x='Year', 
-            y='Total Students',
-            color='Municipality'
-        )
-        + p9.theme_minimal()
-    )
-    plot.save("plots/education/education_evolution_top_municipalities.png")
-    return "plots/education/education_evolution_top_municipalities.png"
-
-@asset(deps=[nivel_estudios_cleaning])
-def nationality_impact_diverging_bar(nivel_estudios_cleaning):
-    max_year = nivel_estudios_cleaning['year'].max()
+    # Assume we sum all education levels (excluding Total if present to avoid double counting)
+    # Based on other assets, we exclude 'Total' and 'No cursa estudios'
     df = nivel_estudios_cleaning[
         (nivel_estudios_cleaning['year'] == max_year) &
-        (nivel_estudios_cleaning['education_level'] == 'Educación superior') &
-        (nivel_estudios_cleaning['sex'] == 'Total')
+        (nivel_estudios_cleaning['sex'] == 'Total') &
+        (nivel_estudios_cleaning['nationality'] == 'Extranjera') & 
+        (~nivel_estudios_cleaning['education_level'].isin(['Total', 'No cursa estudios']))
     ]
     
-    # Top 15 municipalities by total students in Higher Ed
-    # Need to group by municipality to get total (Española + Extranjera)
-    # But wait, does 'Total' sex include both nationalities? Yes.
-    # But does DataFrame have rows for 'Española' and 'Extranjera' separately?
-    # Yes, column 'nationality'.
+    # Aggregate by Municipality
+    df_agg = df.groupby('municipality', as_index=False)['total'].sum()
     
-    # Total students per municipality
-    total_per_muni = df.groupby('municipality')['total'].sum()
-    top_15_munis = total_per_muni.sort_values(ascending=False).head(15).index.tolist()
-    
-    df_filtered = df[df['municipality'].isin(top_15_munis)]
-    
-    # Calculate % Foreign (Extranjera) per municipality
-    # Pivot to get cols 'Española', 'Extranjera'
-    df_pivot = df_filtered.pivot_table(index='municipality', columns='nationality', values='total', aggfunc='sum').fillna(0)
-    
-    if 'Extranjera' in df_pivot.columns and 'Española' in df_pivot.columns:
-        df_pivot['total'] = df_pivot['Española'] + df_pivot['Extranjera']
-        df_pivot['pct_foreign'] = (df_pivot['Extranjera'] / df_pivot['total']) * 100
-    else:
-        # Fallback if categories are different
-        df_pivot['pct_foreign'] = 0
-        
-    # Calculate Regional Avg % Foreign (from the filtered set or whole set? Requirement says "average regional percentage")
-    # Let's calculate from the whole dataset for that level/year
-    all_higher_ed = df.groupby('nationality')['total'].sum()
-    # Assuming nationalities are Extranjera and Española
-    total_foreign = all_higher_ed.get('Extranjera', 0)
-    total_all = all_higher_ed.sum()
-    avg_foreign_pct = (total_foreign / total_all) * 100 if total_all > 0 else 0
-    
-    df_pivot['deviation'] = df_pivot['pct_foreign'] - avg_foreign_pct
-    df_pivot = df_pivot.reset_index()
+    # Top 20
+    top_20 = df_agg.nlargest(20, 'total')
     
     plot = (
-        p9.ggplot(df_pivot, p9.aes(x='reorder(municipality, deviation)', y='deviation', fill='deviation > 0'))
-        + p9.geom_col()
+        p9.ggplot(top_20, p9.aes(x='reorder(municipality, total)', y='total'))
+        + p9.geom_col(fill='steelblue') # Simple bar
         + p9.coord_flip()
-        + p9.scale_fill_manual(values={True: "#2ecc71", False: "#e74c3c"})
-        + p9.geom_hline(yintercept=0, color="gray", linetype="dashed")
         + p9.labs(
-            title=f'Deviation in Foreign Student % (Higher Ed, {max_year})',
-            subtitle=f'Regional Avg: {avg_foreign_pct:.1f}%',
+            title=f'Municipalities with Most Foreign Students ({max_year})', 
             x='Municipality', 
-            y='Deviation form Average (pp)'
+            y='Total Foreign Students'
         )
         + p9.theme_minimal()
-        + p9.theme(legend_position='none')
     )
-    plot.save("plots/education/nationality_impact_diverging_bar.png")
-    return "plots/education/nationality_impact_diverging_bar.png"
+    plot.save("plots/education/top_foreign_students_municipalities_bar.png")
+    return "plots/education/top_foreign_students_municipalities_bar.png"
 
 @asset(deps=[nivel_estudios_cleaning])
 def education_intensity_heatmap(nivel_estudios_cleaning):
@@ -365,7 +290,7 @@ def education_intensity_heatmap(nivel_estudios_cleaning):
     return "plots/education/education_intensity_heatmap.png"
 
 @asset(deps=[nivel_estudios_cleaning])
-def higher_ed_gender_gap_lollipop(nivel_estudios_cleaning):
+def higher_ed_gender_gap_diverging_bar(nivel_estudios_cleaning):
     max_year = nivel_estudios_cleaning['year'].max()
     df = nivel_estudios_cleaning[
         (nivel_estudios_cleaning['year'] == max_year) &
@@ -377,37 +302,46 @@ def higher_ed_gender_gap_lollipop(nivel_estudios_cleaning):
     total_per_muni = df.groupby('municipality')['total'].sum()
     top_20 = total_per_muni.sort_values(ascending=False).head(20).index.tolist()
     
+    # Calculate Regional Reference (Average Proportion of Women)
+    # Using the whole dataset for this level/year
+    all_totals = df.groupby('sex')['total'].sum()
+    total_students = all_totals.sum()
+    total_women = all_totals.get('Mujeres', 0)
+    avg_pct_women = (total_women / total_students) * 100 if total_students > 0 else 0
+    
     df_filtered = df[df['municipality'].isin(top_20)]
     
-    # Calculate Gender Gap
-    # Pivot
+    # Calculate % Women per municipality
     df_pivot = df_filtered.pivot_table(index='municipality', columns='sex', values='total', aggfunc='sum').fillna(0)
     
     df_pivot['total'] = df_pivot['Hombres'] + df_pivot['Mujeres']
-    # If total is 0, avoid div by zero
     df_pivot = df_pivot[df_pivot['total'] > 0]
     
     df_pivot['pct_women'] = (df_pivot['Mujeres'] / df_pivot['total']) * 100
-    df_pivot['pct_men'] = (df_pivot['Hombres'] / df_pivot['total']) * 100
     
-    df_pivot['gender_gap'] = df_pivot['pct_women'] - df_pivot['pct_men'] # Higher positive means more women relative to men
+    # Calculate deviation from reference
+    df_pivot['deviation'] = df_pivot['pct_women'] - avg_pct_women
     df_pivot = df_pivot.reset_index()
     
+    # Create diverging bar chart
     plot = (
-        p9.ggplot(df_pivot, p9.aes(x='reorder(municipality, gender_gap)', y='gender_gap'))
-        + p9.geom_segment(p9.aes(xend='municipality', yend=0), color='gray')
-        + p9.geom_point(size=3, color='purple')
+        p9.ggplot(df_pivot, p9.aes(x='reorder(municipality, deviation)', y='deviation', fill='deviation > 0'))
+        + p9.geom_col()
         + p9.coord_flip()
+        + p9.geom_hline(yintercept=0, color="gray", linetype="dashed")
+        + p9.scale_fill_manual(values={True: "#9b59b6", False: "#e67e22"}, labels={True: "More Women", False: "More Men"}) # Purple vs Orange
         + p9.labs(
-            title=f'Gender Gap in Higher Education ({max_year})', 
-            subtitle='(% Women - % Men) Top 20 Municipalities',
+            title=f'Gender Imbalance in Higher Education ({max_year})', 
+            subtitle=f'Deviation from Regional Avg Women Share ({avg_pct_women:.1f}%)',
             x='Municipality', 
-            y='Gap (Percentage Points)'
+            y='Deviation (Percentage Points)',
+            fill='Direction'
         )
         + p9.theme_minimal()
+        # + p9.theme(legend_position='bottom')
     )
-    plot.save("plots/education/higher_ed_gender_gap_lollipop.png")
-    return "plots/education/higher_ed_gender_gap_lollipop.png"
+    plot.save("plots/education/higher_ed_gender_gap_diverging_bar.png")
+    return "plots/education/higher_ed_gender_gap_diverging_bar.png"
 
 @asset(deps=[nivel_estudios_cleaning])
 def education_level_ridge_plot(nivel_estudios_cleaning):
@@ -438,3 +372,331 @@ def education_level_ridge_plot(nivel_estudios_cleaning):
     )
     plot.save("plots/education/education_level_ridge_plot.png")
     return "plots/education/education_level_ridge_plot.png"
+
+@asset(deps=[nivel_estudios_cleaning])
+def gender_composition_stacked_bar(nivel_estudios_cleaning):
+    max_year = nivel_estudios_cleaning['year'].max()
+    df = nivel_estudios_cleaning[
+        (nivel_estudios_cleaning['year'] == max_year) &
+        (nivel_estudios_cleaning['sex'].isin(['Hombres', 'Mujeres'])) &
+        (~nivel_estudios_cleaning['education_level'].isin(['Total', 'No cursa estudios']))
+    ]
+    
+    plot = (
+        p9.ggplot(df, p9.aes(x='education_level', y='total', fill='sex'))
+        + p9.geom_bar(stat='identity', position='fill')
+        + p9.scale_y_continuous(labels=lambda l: [f"{int(x*100)}%" for x in l])
+        + p9.coord_flip() # Readable labels
+        + p9.labs(
+            title=f'Gender Composition by Education Level ({max_year})', 
+            x='', 
+            y='Percentage', 
+            fill='Sex'
+        )
+        + p9.theme_minimal()
+    )
+    plot.save("plots/education/gender_composition_stacked_bar.png")
+    return "plots/education/gender_composition_stacked_bar.png"
+
+@asset(deps=[nivel_estudios_cleaning])
+def gender_proportion_bar(nivel_estudios_cleaning):
+    max_year = nivel_estudios_cleaning['year'].max()
+    df = nivel_estudios_cleaning[
+        (nivel_estudios_cleaning['year'] == max_year) &
+        (nivel_estudios_cleaning['sex'].isin(['Hombres', 'Mujeres'])) &
+        (~nivel_estudios_cleaning['education_level'].isin(['Total', 'No cursa estudios']))
+    ]
+    
+    # Aggregate by Sex
+    df_agg = df.groupby('sex', as_index=False)['total'].sum()
+    df_agg['percentage'] = df_agg['total'] / df_agg['total'].sum() * 100
+    
+    # Stacked Bar Chart
+    plot = (
+        p9.ggplot(df_agg, p9.aes(x=0, y='percentage', fill='sex'))
+        + p9.geom_bar(stat='identity', width=0.5)
+        + p9.coord_flip()
+        + p9.geom_text(p9.aes(label='round(percentage, 1)'), position=p9.position_stack(vjust=0.5), size=10)
+        + p9.labs(
+            title=f'Proportion of Men vs Women ({max_year})', 
+            fill='Sex',
+            x='', y='Percentage'
+        )
+        + p9.theme_minimal()
+        + p9.theme(
+            axis_text_y=p9.element_blank(), 
+            axis_ticks=p9.element_blank(),
+            panel_grid=p9.element_blank()
+        )
+    )
+    plot.save("plots/education/gender_proportion_bar.png")
+    return "plots/education/gender_proportion_bar.png"
+
+@asset(deps=[nivel_estudios_cleaning])
+def nationality_proportion_bar(nivel_estudios_cleaning):
+    max_year = nivel_estudios_cleaning['year'].max()
+    df = nivel_estudios_cleaning[
+        (nivel_estudios_cleaning['year'] == max_year) &
+        (nivel_estudios_cleaning['sex'] == 'Total') &
+        (~nivel_estudios_cleaning['education_level'].isin(['Total', 'No cursa estudios']))
+    ]
+    
+    if 'nationality' not in df.columns:
+         return "Skipped: Nationality column missing"
+         
+    df_agg = df.groupby('nationality', as_index=False)['total'].sum()
+    df_agg['percentage'] = df_agg['total'] / df_agg['total'].sum() * 100
+    
+    plot = (
+        p9.ggplot(df_agg, p9.aes(x=0, y='percentage', fill='nationality'))
+        + p9.geom_bar(stat='identity', width=0.5)
+        + p9.coord_flip()
+        + p9.geom_text(p9.aes(label='round(percentage, 1)'), position=p9.position_stack(vjust=0.5), size=10)
+        + p9.labs(
+            title=f'Proportion of Locals vs Foreigners ({max_year})', 
+            fill='Nationality',
+            x='', y='Percentage'
+        )
+        + p9.theme_minimal()
+        + p9.theme(
+            axis_text_y=p9.element_blank(), 
+            axis_ticks=p9.element_blank(),
+            panel_grid=p9.element_blank()
+        )
+    )
+    plot.save("plots/education/nationality_proportion_bar.png")
+    return "plots/education/nationality_proportion_bar.png"
+
+@asset(deps=[nivel_estudios_cleaning])
+def education_level_proportion_bar(nivel_estudios_cleaning):
+    max_year = nivel_estudios_cleaning['year'].max()
+    df = nivel_estudios_cleaning[
+        (nivel_estudios_cleaning['year'] == max_year) &
+        (nivel_estudios_cleaning['sex'] == 'Total') &
+        (~nivel_estudios_cleaning['education_level'].isin(['Total', 'No cursa estudios']))
+    ]
+    
+    df_agg = df.groupby('education_level', as_index=False)['total'].sum()
+    df_agg['percentage'] = df_agg['total'] / df_agg['total'].sum() * 100
+    
+    plot = (
+        p9.ggplot(df_agg, p9.aes(x=0, y='percentage', fill='education_level'))
+        + p9.geom_bar(stat='identity', width=0.5)
+        + p9.coord_flip()
+        # Text might be crowded for many levels, disable only if needed or keep small
+        # + p9.geom_text(p9.aes(label='round(percentage, 1)'), position=p9.position_stack(vjust=0.5), size=8)
+        + p9.labs(
+            title=f'Proportion of Education Levels ({max_year})', 
+            fill='Level',
+            x='', y='Percentage'
+        )
+        + p9.theme_minimal()
+        + p9.theme(
+            axis_text_y=p9.element_blank(), 
+            axis_ticks=p9.element_blank(),
+            panel_grid=p9.element_blank()
+        )
+    )
+    plot.save("plots/education/education_level_proportion_bar.png")
+    return "plots/education/education_level_proportion_bar.png"
+
+@asset(deps=[nivel_estudios_cleaning])
+def higher_ed_by_island_bar(nivel_estudios_cleaning):
+    max_year = nivel_estudios_cleaning['year'].max()
+    df = nivel_estudios_cleaning[
+        (nivel_estudios_cleaning['year'] == max_year) &
+        (nivel_estudios_cleaning['education_level'] == 'Educación superior') &
+        (nivel_estudios_cleaning['sex'] == 'Total')
+    ]
+    
+    # Island Mapping
+    def get_island(code_str):
+        if not isinstance(code_str, str):
+            return "Unknown"
+        try:
+            code = int(code_str)
+        except:
+            return "Unknown"
+            
+        # Santa Cruz de Tenerife Province (38)
+        if 38000 <= code < 39000:
+            if code in [38013, 38048, 38054]: return "El Hierro"
+            if code in [38002, 38003, 38021, 38036, 38049, 38050]: return "La Gomera"
+            if code in [38007, 38008, 38009, 38014, 38016, 38024, 38027, 38029, 38030, 38033, 38037, 38045, 38047, 38053]: return "La Palma"
+            return "Tenerife" 
+            
+        # Las Palmas Province (35)
+        if 35000 <= code < 36000:
+            if code in [35004, 35010, 35018, 35024, 35028, 35029, 35034]: return "Lanzarote"
+            if code in [35003, 35007, 35014, 35015, 35017, 35030]: return "Fuerteventura"
+            return "Gran Canaria" 
+            
+        return "Unknown"
+
+    df['island'] = df['municipality_code'].apply(get_island)
+    
+    df_agg = df.groupby('island', as_index=False)['total'].sum()
+    df_agg = df_agg[df_agg['island'] != "Unknown"] 
+    
+    df_agg['percentage'] = df_agg['total'] / df_agg['total'].sum() * 100
+    
+    plot = (
+        p9.ggplot(df_agg, p9.aes(x=0, y='percentage', fill='island'))
+        + p9.geom_bar(stat='identity', width=0.5)
+        + p9.coord_flip()
+
+        + p9.labs(
+            title=f'Higher Education Students by Island ({max_year})', 
+            fill='Island',
+            x='', y='Percentage'
+        )
+        + p9.theme_minimal()
+        + p9.theme(
+            axis_text_y=p9.element_blank(), 
+            axis_ticks=p9.element_blank(),
+            panel_grid=p9.element_blank()
+        )
+    )
+    return "plots/education/higher_ed_by_island_bar.png"
+
+@asset(deps=[renta_cleaning, nivel_estudios_cleaning])
+def income_vs_higher_ed_scatter(renta_cleaning, nivel_estudios_cleaning):
+    # Prepare Income Data
+    max_year_renta = renta_cleaning['year'].max()
+    income_df = renta_cleaning[
+        (renta_cleaning['year'] == max_year_renta) &
+        (renta_cleaning['measure'] == 'Sueldos y salarios')
+    ].copy()
+    
+    # Prepare Education Data (Higher Ed %)
+    max_year_ne = nivel_estudios_cleaning['year'].max()
+    ne_df = nivel_estudios_cleaning[
+        (nivel_estudios_cleaning['year'] == max_year_ne) &
+        (nivel_estudios_cleaning['sex'] == 'Total')
+    ].copy()
+    
+    # Calculate % Higher Ed per municipality
+    # Total students per muni
+    idx_cols = ['municipality']
+    total_students = ne_df[~ne_df['education_level'].isin(['Total', 'No cursa estudios'])].groupby(idx_cols)['total'].sum().reset_index(name='total_students')
+    
+    higher_ed = ne_df[ne_df['education_level'] == 'Educación superior'].groupby(idx_cols)['total'].sum().reset_index(name='higher_ed_students')
+    
+    edu_df = pd.merge(total_students, higher_ed, on='municipality', how='left').fillna(0)
+    edu_df['pct_higher_ed'] = (edu_df['higher_ed_students'] / edu_df['total_students']) * 100
+    
+    # Merge Income and Education
+    merged = pd.merge(income_df, edu_df, left_on='region', right_on='municipality', how='inner')
+    
+    plot = (
+        p9.ggplot(merged, p9.aes(x='value', y='pct_higher_ed'))
+        + p9.geom_point(alpha=0.7, color='blue')
+        + p9.geom_smooth(method='lm', color='red', se=False)
+        + p9.labs(
+            title=f'Income vs Higher Education ({max_year_renta})', 
+            x='Average Income (Sueldos y salarios)', 
+            y='% Population with Higher Education'
+        )
+        + p9.theme_minimal()
+    )
+    plot.save("plots/combination/income_vs_higher_ed_scatter.png")
+    return "plots/combination/income_vs_higher_ed_scatter.png"
+
+@asset(deps=[renta_cleaning, nivel_estudios_cleaning])
+def income_vs_foreign_pop_scatter(renta_cleaning, nivel_estudios_cleaning):
+    # Prepare Income
+    max_year_renta = renta_cleaning['year'].max()
+    income_df = renta_cleaning[
+        (renta_cleaning['year'] == max_year_renta) &
+        (renta_cleaning['measure'] == 'Sueldos y salarios')
+    ].copy()
+    
+    # Prepare Foreign %
+    max_year_ne = nivel_estudios_cleaning['year'].max()
+    # Need nationality breakdown. Assuming 'nationality' exists and we can filter.
+    if 'nationality' not in nivel_estudios_cleaning.columns:
+         return "Skipped: Nationality column missing"
+
+    ne_df = nivel_estudios_cleaning[
+        (nivel_estudios_cleaning['year'] == max_year_ne) &
+        (nivel_estudios_cleaning['sex'] == 'Total') &
+        (~nivel_estudios_cleaning['education_level'].isin(['Total', 'No cursa estudios']))
+    ].copy()
+    
+    # Total students per muni
+    total_students = ne_df.groupby('municipality')['total'].sum().reset_index(name='total_students')
+    
+    # Foreign students
+    foreign_students = ne_df[ne_df['nationality'] == 'Extranjera'].groupby('municipality')['total'].sum().reset_index(name='foreign_students')
+    
+    edu_df = pd.merge(total_students, foreign_students, on='municipality', how='left').fillna(0)
+    edu_df['pct_foreign'] = (edu_df['foreign_students'] / edu_df['total_students']) * 100
+    
+    # Merge
+    merged = pd.merge(income_df, edu_df, left_on='region', right_on='municipality', how='inner')
+    
+    plot = (
+        p9.ggplot(merged, p9.aes(x='value', y='pct_foreign'))
+        + p9.geom_point(alpha=0.7, color='green')
+        + p9.geom_smooth(method='lm', color='orange', se=False)
+        + p9.labs(
+            title=f'Income vs Foreign Student % ({max_year_renta})', 
+            x='Average Income (Sueldos y salarios)', 
+            y='% Foreign Students'
+        )
+        + p9.theme_minimal()
+    )
+    plot.save("plots/combination/income_vs_foreign_pop_scatter.png")
+    return "plots/combination/income_vs_foreign_pop_scatter.png"
+
+@asset(deps=[renta_cleaning, nivel_estudios_cleaning])
+def rich_vs_poor_higher_ed_bar(renta_cleaning, nivel_estudios_cleaning):
+    # Same merge logic as first asset
+    # Prepare Income
+    max_year_renta = renta_cleaning['year'].max()
+    income_df = renta_cleaning[
+        (renta_cleaning['year'] == max_year_renta) &
+        (renta_cleaning['measure'] == 'Sueldos y salarios')
+    ].copy()
+    
+    # Prepare Higher Ed %
+    max_year_ne = nivel_estudios_cleaning['year'].max()
+    ne_df = nivel_estudios_cleaning[
+        (nivel_estudios_cleaning['year'] == max_year_ne) &
+        (nivel_estudios_cleaning['sex'] == 'Total')
+    ].copy()
+    
+    idx_cols = ['municipality']
+    total_students = ne_df[~ne_df['education_level'].isin(['Total', 'No cursa estudios'])].groupby(idx_cols)['total'].sum().reset_index(name='total_students')
+    higher_ed = ne_df[ne_df['education_level'] == 'Educación superior'].groupby(idx_cols)['total'].sum().reset_index(name='higher_ed_students')
+    
+    edu_df = pd.merge(total_students, higher_ed, on='municipality', how='left').fillna(0)
+    edu_df['pct_higher_ed'] = (edu_df['higher_ed_students'] / edu_df['total_students']) * 100
+    
+    merged = pd.merge(income_df, edu_df, left_on='region', right_on='municipality', how='inner')
+    
+    # Sort by Income
+    merged = merged.sort_values('value', ascending=False)
+    
+    top_5 = merged.head(5).copy()
+    top_5['Category'] = 'Top 5 Richest'
+    
+    bottom_5 = merged.tail(5).copy()
+    bottom_5['Category'] = 'Bottom 5 Poorest'
+    
+    combined = pd.concat([top_5, bottom_5])
+    
+    plot = (
+        p9.ggplot(combined, p9.aes(x='reorder(municipality, pct_higher_ed)', y='pct_higher_ed', fill='Category'))
+        + p9.geom_col()
+        + p9.coord_flip()
+        + p9.labs(
+            title=f'Higher Education in Richest vs Poorest Municipalities ({max_year_renta})', 
+            x='Municipality', 
+            y='% Higher Education Students',
+            fill='Income Grp'
+        )
+        + p9.theme_minimal()
+    )
+    plot.save("plots/combination/rich_vs_poor_higher_ed_bar.png")
+    return "plots/combination/rich_vs_poor_higher_ed_bar.png"
