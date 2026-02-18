@@ -6,11 +6,11 @@ from lab_renta import (
     income_composition_stacked_bar, wage_deviation_from_avg, income_distribution_boxplot, 
     unemployment_trend_by_region, income_composition_heatmap, 
     nivel_estudios_load, nivel_estudios_cleaning,
-    gender_composition_stacked_bar,
-    education_intensity_heatmap, higher_ed_gender_gap_diverging_bar, education_level_ridge_plot,
+    higher_ed_gender_gap_diverging_bar,
     gender_proportion_bar, nationality_proportion_bar,
     education_level_proportion_bar, higher_ed_by_island_bar,
-    top_foreign_students_municipalities_bar
+    top_foreign_students_municipalities_bar,
+    income_vs_higher_ed_scatter, higher_ed_mun_wage_comparison
 )
 
 def run_verification():
@@ -62,30 +62,24 @@ def run_verification():
     print("Unique Municipalities in Data:")
     print(sorted(ne_clean['municipality'].unique()))
     
+    print("Unique Education Levels:")
+    print(ne_clean['education_level'].unique())
+    
     print("Generating top_foreign_students_municipalities_bar...")
     res = top_foreign_students_municipalities_bar(ne_clean)
     print(f"Result: {res}")
 
 
 
-    print("Generating gender_composition_stacked_bar...")
-    res = gender_composition_stacked_bar(ne_clean)
-    print(f"Result: {res}")
-    
+
 
     
-    print("Generating education_intensity_heatmap...")
-    res = education_intensity_heatmap(ne_clean)
-    print(f"Result: {res}")
-    
+
     print("Generating higher_ed_gender_gap_diverging_bar...")
     res = higher_ed_gender_gap_diverging_bar(ne_clean)
     print(f"Result: {res}")
     
-    print("Generating education_level_ridge_plot...")
-    res = education_level_ridge_plot(ne_clean)
-    print(f"Result: {res}")
-    
+
     print("Generating gender_proportion_bar...")
     res = gender_proportion_bar(ne_clean)
     print(f"Result: {res}")
@@ -102,6 +96,14 @@ def run_verification():
     res = higher_ed_by_island_bar(ne_clean)
     print(f"Result: {res}")
     
+    print("Generating income_vs_higher_ed_scatter...")
+    res = income_vs_higher_ed_scatter(clean_renta, ne_clean)
+    print(f"Result: {res}")
+    
+    print("Generating higher_ed_mun_wage_comparison...")
+    res = higher_ed_mun_wage_comparison(clean_renta, ne_clean)
+    print(f"Result: {res}")
+
     print("All plots generated successfully (saved directly by assets to plots/ directory).")
 
 if __name__ == "__main__":

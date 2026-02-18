@@ -32,8 +32,13 @@ def renta_cleaning(renta_load):
         "OBS_VALUE": "value"
     })
     
+    # Ensure year is strictly numeric (YYYY)
+    # Handle potential "YYYY-MM-DD" strings or other formats
+    renta['year'] = pd.to_numeric(renta['year'].astype(str).str.extract(r'^(\d{4})')[0], errors='coerce')
+    
     # Drop rows with missing values in important columns
     renta = renta.dropna(subset=['region', 'year', 'measure', 'value'])
+    renta['year'] = renta['year'].astype(int)
     
     return renta
 
@@ -47,7 +52,7 @@ def income_composition_stacked_bar(renta_cleaning):
         p9.ggplot(df, p9.aes(x='region', y='value', fill='measure'))
         + p9.geom_bar(stat='identity', position='fill') # 'fill' makes it 100% stacked
         + p9.scale_y_continuous(labels=lambda l: [f"{int(x*100)}%" for x in l])
-        + p9.labs(title='Income Composition by Island (2023)', x='', y='Percentage Share', fill='Source')
+        + p9.labs(title='Composición de la Renta por Isla (2023)', x='', y='Porcentaje', fill='Fuente')
         + p9.theme_minimal()
         + p9.theme(axis_text_x=p9.element_text(rotation=45, hjust=1))
     )
@@ -74,8 +79,8 @@ def wage_deviation_from_avg(renta_cleaning):
         + p9.geom_col()
         + p9.coord_flip()
         + p9.scale_fill_manual(values={True: "#2ecc71", False: "#e74c3c"})
-        + p9.labs(title=f'Wage Share: Deviation from Canarias Average ({avg_val})', 
-                  subtitle='Top and Bottom 10 Municipalities', x='', y='Percentage Points +/- Avg')
+        + p9.labs(title=f'Cuota Salarial: Desviación del Promedio de Canarias ({avg_val:.1f})', 
+                  subtitle='Top 10 y Bottom 10 Municipios', x='', y='Puntos Porcentuales +/- Promedio')
         + p9.theme_minimal()
         + p9.theme(legend_position='none')
     )
@@ -89,7 +94,7 @@ def income_distribution_boxplot(renta_cleaning):
     plot = (
         p9.ggplot(df, p9.aes(x='measure', y='value', fill='measure'))
         + p9.geom_boxplot() # Just a boxplot
-        + p9.labs(title='Income Distribution by Category (2023)', x='', y='Value (%)')
+        + p9.labs(title='Distribución de la Renta por Categoría (2023)', x='', y='Valor (%)')
         + p9.theme_minimal()
         + p9.theme(legend_position='none', axis_text_x=p9.element_text(rotation=45, hjust=1))
     )
@@ -106,16 +111,29 @@ def unemployment_trend_by_region(renta_cleaning):
     df = renta_cleaning[
         (renta_cleaning['measure'] == 'Prestaciones por desempleo') &
         (renta_cleaning['region'].isin(target_regions))
-    ]
+    ].copy()
+    
+    # Highlight Canarias
+    df['is_canarias'] = df['region'] == 'Canarias'
+    years = sorted(df['year'].unique())
     
     # Create a line chart matching the request (single graph, multiple lines)
     plot = (
-        p9.ggplot(df, p9.aes(x='year', y='value', color='region'))
-        + p9.geom_line(size=1)
-        + p9.labs(title='Unemployment Benefits Trend by Region (Islands & Canarias)', y='Value', x='Year', color='Region')
+        p9.ggplot(df, p9.aes(x='year', y='value', color='region', size='is_canarias', alpha='is_canarias'))
+        + p9.geom_line()
+        + p9.scale_size_manual(values={True: 2.0, False: 0.8}) # Thicker for Canarias
+        + p9.scale_alpha_manual(values={True: 1.0, False: 0.7}) # More opaque for Canarias
+        + p9.scale_x_continuous(breaks=years)
+        + p9.labs(
+            title='Evolución de Prestaciones por Desempleo por Región', 
+            y='Valor', 
+            x='Año', 
+            color='Región'
+        )
         + p9.theme_minimal()
         # Ensure the legend is visible now that we don't have facets
         + p9.theme(legend_position='right') 
+        + p9.guides(size=False, alpha=False)
     )
     plot.save("plots/income/unemployment_trend_by_region.png")
     return "plots/income/unemployment_trend_by_region.png"
@@ -139,7 +157,7 @@ def income_composition_heatmap(renta_cleaning):
     plot = (
         p9.ggplot(df, p9.aes(x='factor(year)', y='region', fill='value'))
         + p9.geom_tile()
-        + p9.labs(title='Pension Income Composition Heatmap', y='Region', x='Year', fill='Value')
+        + p9.labs(title='Mapa de Calor de Pensiones (Principales Regiones)', y='Región', x='Año', fill='Valor')
         + p9.theme_minimal()
         + p9.scale_fill_gradient(low="white", high="red", limits=(df['value'].min(), df['value'].max()))
     )
@@ -178,11 +196,12 @@ def pension_growth_ranking(renta_cleaning):
         + p9.geom_point(size=3, color='orange')
         + p9.coord_flip()
         + p9.labs(
-            title='Top 15 Municipalities by Pension Share Growth (2015-2023)', 
-            x='Municipality', 
-            y='Change in Percentage Points'
+            title='Top 15 Municipios con Mayor Crecimiento en Pensiones (2015-2023)', 
+            x='Municipio', 
+            y='Cambio en Puntos Porcentuales'
         )
         + p9.theme_minimal()
+        + p9.theme(figure_size=(12, 8))
     )
     plot.save("plots/income/pension_growth_ranking.png")
     return "plots/income/pension_growth_ranking.png"
@@ -215,12 +234,16 @@ def nivel_estudios_cleaning(nivel_estudios_load):
     df['municipality_code'] = df['municipality_raw'].astype(str).str.extract(r'^(\d{5})')
     df['municipality'] = df['municipality_raw'].astype(str).str.extract(r'^\d{5}\s+(.*)')
     
+    # Ensure year is strictly numeric (YYYY)
+    df['year'] = pd.to_numeric(df['year'].astype(str).str.extract(r'^(\d{4})')[0], errors='coerce')
+    
     # If regex fails (e.g. for totals or other formats), we might get NaNs. 
     # Let's filter out rows where municipality_code is NaN, assuming we only want specific municipality data
     df = df.dropna(subset=['municipality_code'])
     
     # Filter out rows with missing essential data
     df = df.dropna(subset=['year', 'total', 'education_level'])
+    df['year'] = df['year'].astype(int)
     
     return df
 
@@ -253,41 +276,16 @@ def top_foreign_students_municipalities_bar(nivel_estudios_cleaning):
         + p9.geom_col(fill='steelblue') # Simple bar
         + p9.coord_flip()
         + p9.labs(
-            title=f'Municipalities with Most Foreign Students ({max_year})', 
-            x='Municipality', 
-            y='Total Foreign Students'
+            title=f'Municipios con Más Estudiantes Extranjeros ({max_year})', 
+            x='Municipio', 
+            y='Total Estudiantes Extranjeros'
         )
         + p9.theme_minimal()
     )
     plot.save("plots/education/top_foreign_students_municipalities_bar.png")
     return "plots/education/top_foreign_students_municipalities_bar.png"
 
-@asset(deps=[nivel_estudios_cleaning])
-def education_intensity_heatmap(nivel_estudios_cleaning):
-    # Year vs Education Level
-    df = nivel_estudios_cleaning[
-        (nivel_estudios_cleaning['sex'] == 'Total') &
-        (~nivel_estudios_cleaning['education_level'].isin(['Total', 'No cursa estudios']))
-    ]
-    
-    # Aggregate total students
-    df_agg = df.groupby(['year', 'education_level'], as_index=False)['total'].sum()
-    
-    plot = (
-        p9.ggplot(df_agg, p9.aes(x='factor(year)', y='education_level', fill='total'))
-        + p9.geom_tile()
-        + p9.scale_fill_gradient(low="yellow", high="#4a148c") # Yellow to Dark Purple
-        + p9.labs(
-            title='Education Intensity: Total Students Scale', 
-            x='Year', 
-            y='Education Level', 
-            fill='Total Students'
-        )
-        + p9.theme_minimal()
-        + p9.theme(axis_text_x=p9.element_text(rotation=45, hjust=1))
-    )
-    plot.save("plots/education/education_intensity_heatmap.png")
-    return "plots/education/education_intensity_heatmap.png"
+
 
 @asset(deps=[nivel_estudios_cleaning])
 def higher_ed_gender_gap_diverging_bar(nivel_estudios_cleaning):
@@ -329,74 +327,24 @@ def higher_ed_gender_gap_diverging_bar(nivel_estudios_cleaning):
         + p9.geom_col()
         + p9.coord_flip()
         + p9.geom_hline(yintercept=0, color="gray", linetype="dashed")
-        + p9.scale_fill_manual(values={True: "#9b59b6", False: "#e67e22"}, labels={True: "More Women", False: "More Men"}) # Purple vs Orange
+        + p9.scale_fill_manual(values={True: "#9b59b6", False: "#e67e22"}, labels={True: "Más Mujeres", False: "Más Hombres"}) # Purple vs Orange
         + p9.labs(
-            title=f'Gender Imbalance in Higher Education ({max_year})', 
-            subtitle=f'Deviation from Regional Avg Women Share ({avg_pct_women:.1f}%)',
-            x='Municipality', 
-            y='Deviation (Percentage Points)',
-            fill='Direction'
+            title=f'Desequilibrio de Género en Educación Superior ({max_year})', 
+            subtitle=f'Desviación del Promedio Regional de Mujeres ({avg_pct_women:.1f}%)',
+            x='Municipio', 
+            y='Desviación (Puntos Porcentuales)',
+            fill='Dirección'
         )
         + p9.theme_minimal()
+        + p9.theme(figure_size=(12, 8))
         # + p9.theme(legend_position='bottom')
     )
     plot.save("plots/education/higher_ed_gender_gap_diverging_bar.png")
     return "plots/education/higher_ed_gender_gap_diverging_bar.png"
 
-@asset(deps=[nivel_estudios_cleaning])
-def education_level_ridge_plot(nivel_estudios_cleaning):
-    # Violin plot
-    max_year = nivel_estudios_cleaning['year'].max()
-    df = nivel_estudios_cleaning[
-        (nivel_estudios_cleaning['year'] == max_year) &
-        (nivel_estudios_cleaning['sex'] == 'Total') &
-        (~nivel_estudios_cleaning['education_level'].isin(['Total']))
-    ]
-    
-    # We want distribution of "Total Students" across municipalities for each level
-    # Currently df is melted by nationality. We should sum by municipality + level first.
-    df_agg = df.groupby(['municipality', 'education_level'], as_index=False)['total'].sum()
-    
-    plot = (
-        p9.ggplot(df_agg, p9.aes(x='education_level', y='total', fill='education_level'))
-        + p9.geom_violin(alpha=0.6, trim=False)
-        # Using a log scale might help visualization if skew is high, but standard is requested
-        + p9.coord_flip()
-        + p9.labs(
-            title=f'Distribution of Student Totals by Level ({max_year})', 
-            x='', 
-            y='Total Students (per Municipality)'
-        )
-        + p9.theme_minimal()
-        + p9.theme(legend_position='none')
-    )
-    plot.save("plots/education/education_level_ridge_plot.png")
-    return "plots/education/education_level_ridge_plot.png"
 
-@asset(deps=[nivel_estudios_cleaning])
-def gender_composition_stacked_bar(nivel_estudios_cleaning):
-    max_year = nivel_estudios_cleaning['year'].max()
-    df = nivel_estudios_cleaning[
-        (nivel_estudios_cleaning['year'] == max_year) &
-        (nivel_estudios_cleaning['sex'].isin(['Hombres', 'Mujeres'])) &
-        (~nivel_estudios_cleaning['education_level'].isin(['Total', 'No cursa estudios']))
-    ]
-    
-    plot = (
-        p9.ggplot(df, p9.aes(x='education_level', y='total', fill='sex'))
-        + p9.geom_bar(stat='identity', position='fill')
-        + p9.scale_y_continuous(labels=lambda l: [f"{int(x*100)}%" for x in l])
-        + p9.coord_flip() # Readable labels
-        + p9.labs(
-            title=f'Gender Composition by Education Level ({max_year})', 
-            x='', 
-            y='Percentage', 
-            fill='Sex'
-        )
-        + p9.theme_minimal()
-    )
-    plot.save("plots/education/gender_composition_stacked_bar.png")
-    return "plots/education/gender_composition_stacked_bar.png"
+
+
 
 @asset(deps=[nivel_estudios_cleaning])
 def gender_proportion_bar(nivel_estudios_cleaning):
@@ -418,9 +366,9 @@ def gender_proportion_bar(nivel_estudios_cleaning):
         + p9.coord_flip()
         + p9.geom_text(p9.aes(label='round(percentage, 1)'), position=p9.position_stack(vjust=0.5), size=10)
         + p9.labs(
-            title=f'Proportion of Men vs Women ({max_year})', 
-            fill='Sex',
-            x='', y='Percentage'
+            title=f'Proporción de Hombres vs Mujeres ({max_year})', 
+            fill='Sexo',
+            x='', y='Porcentaje'
         )
         + p9.theme_minimal()
         + p9.theme(
@@ -434,9 +382,8 @@ def gender_proportion_bar(nivel_estudios_cleaning):
 
 @asset(deps=[nivel_estudios_cleaning])
 def nationality_proportion_bar(nivel_estudios_cleaning):
-    max_year = nivel_estudios_cleaning['year'].max()
+    # Evolution over all years
     df = nivel_estudios_cleaning[
-        (nivel_estudios_cleaning['year'] == max_year) &
         (nivel_estudios_cleaning['sex'] == 'Total') &
         (~nivel_estudios_cleaning['education_level'].isin(['Total', 'No cursa estudios']))
     ]
@@ -444,24 +391,27 @@ def nationality_proportion_bar(nivel_estudios_cleaning):
     if 'nationality' not in df.columns:
          return "Skipped: Nationality column missing"
          
-    df_agg = df.groupby('nationality', as_index=False)['total'].sum()
-    df_agg['percentage'] = df_agg['total'] / df_agg['total'].sum() * 100
+    df_agg = df.groupby(['year', 'nationality'], as_index=False)['total'].sum()
+    
+    # Calculate percentage per year
+    # Join with total per year
+    year_totals = df_agg.groupby('year')['total'].transform('sum')
+    df_agg['percentage'] = df_agg['total'] / year_totals * 100
     
     plot = (
-        p9.ggplot(df_agg, p9.aes(x=0, y='percentage', fill='nationality'))
-        + p9.geom_bar(stat='identity', width=0.5)
-        + p9.coord_flip()
-        + p9.geom_text(p9.aes(label='round(percentage, 1)'), position=p9.position_stack(vjust=0.5), size=10)
+        p9.ggplot(df_agg, p9.aes(x='factor(year)', y='percentage', fill='nationality'))
+        + p9.geom_bar(stat='identity', width=0.7)
+        # Vertical bars for time series
+        + p9.geom_text(p9.aes(label='round(percentage, 1)'), position=p9.position_stack(vjust=0.5), size=8)
         + p9.labs(
-            title=f'Proportion of Locals vs Foreigners ({max_year})', 
-            fill='Nationality',
-            x='', y='Percentage'
+            title='Proporción de Locales vs Extranjeros por Año', 
+            fill='Nacionalidad',
+            x='Año', y='Porcentaje'
         )
         + p9.theme_minimal()
         + p9.theme(
-            axis_text_y=p9.element_blank(), 
-            axis_ticks=p9.element_blank(),
-            panel_grid=p9.element_blank()
+            panel_grid_major_x=p9.element_blank(),
+            figure_size=(12, 6)
         )
     )
     plot.save("plots/education/nationality_proportion_bar.png")
@@ -477,6 +427,18 @@ def education_level_proportion_bar(nivel_estudios_cleaning):
     ]
     
     df_agg = df.groupby('education_level', as_index=False)['total'].sum()
+    
+    # Shorten labels for legend (Spanish)
+    label_map = {
+        'Educación primaria e inferior': 'Primaria e Inferior',
+        'Cursa estudios pero no hay información sobre los mismos': 'Desconocido (Cursando)',
+        'Primera etapa de Educación Secundaria y similar': 'Secundaria (1ª Etapa)',
+        'Educación superior': 'Educación Superior',
+        'Segunda etapa de Educación Secundaria, con orientación profesional (con y sin continuidad en la educación superior); Educación postsecundaria no superior': 'FP / Post-Secundaria',
+        'Segunda etapa de educación secundaria, con orientación general': 'Secundaria (General)'
+    }
+    df_agg['education_level'] = df_agg['education_level'].replace(label_map)
+    
     df_agg['percentage'] = df_agg['total'] / df_agg['total'].sum() * 100
     
     plot = (
@@ -486,15 +448,18 @@ def education_level_proportion_bar(nivel_estudios_cleaning):
         # Text might be crowded for many levels, disable only if needed or keep small
         # + p9.geom_text(p9.aes(label='round(percentage, 1)'), position=p9.position_stack(vjust=0.5), size=8)
         + p9.labs(
-            title=f'Proportion of Education Levels ({max_year})', 
-            fill='Level',
-            x='', y='Percentage'
+            title=f'Proporción de Niveles Educativos ({max_year})', 
+            fill='Nivel Educativo',
+            x='', y='Porcentaje'
         )
         + p9.theme_minimal()
         + p9.theme(
             axis_text_y=p9.element_blank(), 
-            axis_ticks=p9.element_blank(),
-            panel_grid=p9.element_blank()
+            axis_ticks_y=p9.element_blank(),
+            axis_text_x=p9.element_text(color='black', size=10),
+            panel_grid_major_y=p9.element_blank(),
+            figure_size=(12, 6),
+            plot_title=p9.element_text(size=14, ha='center')
         )
     )
     plot.save("plots/education/education_level_proportion_bar.png")
@@ -546,9 +511,9 @@ def higher_ed_by_island_bar(nivel_estudios_cleaning):
         + p9.coord_flip()
 
         + p9.labs(
-            title=f'Higher Education Students by Island ({max_year})', 
-            fill='Island',
-            x='', y='Percentage'
+            title=f'Estudiantes de Educación Superior por Isla ({max_year})', 
+            fill='Isla',
+            x='', y='Porcentaje'
         )
         + p9.theme_minimal()
         + p9.theme(
@@ -557,6 +522,7 @@ def higher_ed_by_island_bar(nivel_estudios_cleaning):
             panel_grid=p9.element_blank()
         )
     )
+    plot.save("plots/education/higher_ed_by_island_bar.png")
     return "plots/education/higher_ed_by_island_bar.png"
 
 @asset(deps=[renta_cleaning, nivel_estudios_cleaning])
@@ -593,64 +559,19 @@ def income_vs_higher_ed_scatter(renta_cleaning, nivel_estudios_cleaning):
         + p9.geom_point(alpha=0.7, color='blue')
         + p9.geom_smooth(method='lm', color='red', se=False)
         + p9.labs(
-            title=f'Income vs Higher Education ({max_year_renta})', 
-            x='Average Income (Sueldos y salarios)', 
-            y='% Population with Higher Education'
+            title=f'Renta vs Educación Superior ({max_year_renta})', 
+            x='Renta Media (Sueldos y salarios)', 
+            y='% Población con Educación Superior'
         )
         + p9.theme_minimal()
     )
     plot.save("plots/combination/income_vs_higher_ed_scatter.png")
     return "plots/combination/income_vs_higher_ed_scatter.png"
 
-@asset(deps=[renta_cleaning, nivel_estudios_cleaning])
-def income_vs_foreign_pop_scatter(renta_cleaning, nivel_estudios_cleaning):
-    # Prepare Income
-    max_year_renta = renta_cleaning['year'].max()
-    income_df = renta_cleaning[
-        (renta_cleaning['year'] == max_year_renta) &
-        (renta_cleaning['measure'] == 'Sueldos y salarios')
-    ].copy()
-    
-    # Prepare Foreign %
-    max_year_ne = nivel_estudios_cleaning['year'].max()
-    # Need nationality breakdown. Assuming 'nationality' exists and we can filter.
-    if 'nationality' not in nivel_estudios_cleaning.columns:
-         return "Skipped: Nationality column missing"
 
-    ne_df = nivel_estudios_cleaning[
-        (nivel_estudios_cleaning['year'] == max_year_ne) &
-        (nivel_estudios_cleaning['sex'] == 'Total') &
-        (~nivel_estudios_cleaning['education_level'].isin(['Total', 'No cursa estudios']))
-    ].copy()
-    
-    # Total students per muni
-    total_students = ne_df.groupby('municipality')['total'].sum().reset_index(name='total_students')
-    
-    # Foreign students
-    foreign_students = ne_df[ne_df['nationality'] == 'Extranjera'].groupby('municipality')['total'].sum().reset_index(name='foreign_students')
-    
-    edu_df = pd.merge(total_students, foreign_students, on='municipality', how='left').fillna(0)
-    edu_df['pct_foreign'] = (edu_df['foreign_students'] / edu_df['total_students']) * 100
-    
-    # Merge
-    merged = pd.merge(income_df, edu_df, left_on='region', right_on='municipality', how='inner')
-    
-    plot = (
-        p9.ggplot(merged, p9.aes(x='value', y='pct_foreign'))
-        + p9.geom_point(alpha=0.7, color='green')
-        + p9.geom_smooth(method='lm', color='orange', se=False)
-        + p9.labs(
-            title=f'Income vs Foreign Student % ({max_year_renta})', 
-            x='Average Income (Sueldos y salarios)', 
-            y='% Foreign Students'
-        )
-        + p9.theme_minimal()
-    )
-    plot.save("plots/combination/income_vs_foreign_pop_scatter.png")
-    return "plots/combination/income_vs_foreign_pop_scatter.png"
 
 @asset(deps=[renta_cleaning, nivel_estudios_cleaning])
-def rich_vs_poor_higher_ed_bar(renta_cleaning, nivel_estudios_cleaning):
+def higher_ed_mun_wage_comparison(renta_cleaning, nivel_estudios_cleaning):
     # Same merge logic as first asset
     # Prepare Income
     max_year_renta = renta_cleaning['year'].max()
@@ -678,11 +599,16 @@ def rich_vs_poor_higher_ed_bar(renta_cleaning, nivel_estudios_cleaning):
     # Sort by Income
     merged = merged.sort_values('value', ascending=False)
     
+    # Calculate regional average (weighted)
+    total_higher = edu_df['higher_ed_students'].sum()
+    total_pop = edu_df['total_students'].sum()
+    avg_higher_ed = (total_higher / total_pop) * 100 if total_pop > 0 else 0
+    
     top_5 = merged.head(5).copy()
-    top_5['Category'] = 'Top 5 Richest'
+    top_5['Category'] = 'Mayor Cuota Salarial'
     
     bottom_5 = merged.tail(5).copy()
-    bottom_5['Category'] = 'Bottom 5 Poorest'
+    bottom_5['Category'] = 'Menor Cuota Salarial'
     
     combined = pd.concat([top_5, bottom_5])
     
@@ -690,13 +616,17 @@ def rich_vs_poor_higher_ed_bar(renta_cleaning, nivel_estudios_cleaning):
         p9.ggplot(combined, p9.aes(x='reorder(municipality, pct_higher_ed)', y='pct_higher_ed', fill='Category'))
         + p9.geom_col()
         + p9.coord_flip()
+        + p9.facet_wrap('~Category', scales='free_y', ncol=1)
+        + p9.geom_hline(yintercept=avg_higher_ed, linetype='dashed', color='black')
         + p9.labs(
-            title=f'Higher Education in Richest vs Poorest Municipalities ({max_year_renta})', 
-            x='Municipality', 
-            y='% Higher Education Students',
-            fill='Income Grp'
+            title=f'Educación Superior en Municipios con Mayor Cuota Salarial ({max_year_renta})', 
+            subtitle=f'Promedio Regional: {avg_higher_ed:.1f}%',
+            x='Municipio', 
+            y='% Estudiantes Educación Superior',
+            fill='Grupo Salarial'
         )
         + p9.theme_minimal()
+        + p9.theme(legend_position='none')
     )
-    plot.save("plots/combination/rich_vs_poor_higher_ed_bar.png")
-    return "plots/combination/rich_vs_poor_higher_ed_bar.png"
+    plot.save("plots/combination/higher_ed_mun_wage_comparison.png")
+    return "plots/combination/higher_ed_mun_wage_comparison.png"
