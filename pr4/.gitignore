@@ -1,0 +1,7 @@
+venv/*
+myvenv/*
+.tmp_dagster_home_*
+__pycache__/*
+.ipynb_checkpoints/*
+data/*
+*.txt
