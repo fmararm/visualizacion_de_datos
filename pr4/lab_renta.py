@@ -93,6 +93,7 @@ def renta_cleaning(renta_load):
         "OBS_VALUE": "value"
     })
     renta['year'] = pd.to_numeric(renta['year'].astype(str).str.extract(r'^(\d{4})')[0], errors='coerce')
+    renta['measure'] = renta['measure'].replace("Prestaciones por desempleo", "Desempleo")
     renta = renta.dropna(subset=['region', 'year', 'measure', 'value'])
     renta['year'] = renta['year'].astype(int)
     return renta
@@ -119,14 +120,20 @@ def nivel_estudios_cleaning(nivel_estudios_load):
         if not isinstance(code, str): return "Canarias"
         if code.startswith("35"):
             code_int = int(code)
-            if code_int >= 35500 and code_int <= 35580: return "Lanzarote"
-            if code_int >= 35600 and code_int <= 35660: return "Fuerteventura"
+            FUERTEVENTURA = {35003, 35007, 35014, 35015, 35017, 35023}
+            LANZAROTE = {35004, 35010, 35019, 35022, 35024, 35028, 35029}
+            if code_int in FUERTEVENTURA: return "Fuerteventura"
+            if code_int in LANZAROTE: return "Lanzarote"
             return "Gran Canaria"
         if code.startswith("38"):
             code_int = int(code)
-            if code_int >= 38700 and code_int <= 38799: return "La Palma"
-            if code_int >= 38800 and code_int <= 38892: return "La Gomera"
-            if code_int >= 38900 and code_int <= 38911: return "El Hierro"
+            LA_GOMERA = {38004, 38019, 38021, 38026, 38041}
+            EL_HIERRO = {38002, 38043, 38048}
+            LA_PALMA  = {38001, 38003, 38006, 38009, 38015, 38024,
+                         38027, 38030, 38033, 38036, 38037}
+            if code_int in EL_HIERRO: return "El Hierro"
+            if code_int in LA_PALMA: return "La Palma"
+            if code_int in LA_GOMERA: return "La Gomera"
             return "Tenerife"
         return "Canarias"
 
@@ -150,9 +157,10 @@ def prompt_income_distribution_boxplot(renta_cleaning):
         * Variable 'measure' mapeada al color (fill).
     - Geometría: Boxplot (geom_boxplot).
     - Etiquetas: 
-        * Título: 'Distribución de Renta por Medida (2023)'.
-        * Eje X: 'Medida'.
-        * Eje Y: 'Valor'.
+        * Título: 'Distribución de Renta por Tipo de Ingreso (2023)'.
+        * Eje X: 'Tipo de ingreso'.
+        * Eje Y: 'Porcentaje de la renta'.
+        * Leyenda (color/fill): 'Tipo'.
     - Principio Gestalt: 
         * Usar colores distintos para cada medida para facilitar la comparación.
     """
@@ -169,19 +177,25 @@ def income_distribution_boxplot(context, prompt_income_distribution_boxplot, ren
 def prompt_unemployment_trend_by_region(renta_cleaning):
     desc = """
     - Dataset: renta_cleaning
-    - Preprocesamiento: Filtrar por 'measure' igual a 'Prestaciones por desempleo' y filtrar por 'region' que pertenezcan exactamente a estas islas: ['Tenerife', 'Gran Canaria', 'Lanzarote', 'Fuerteventura', 'La Palma', 'La Gomera', 'El Hierro']. (Excluir 'Canarias' y municipios).
+    - Preprocesamiento: 
+        1. Filtrar exactamente por 'measure' == 'Desempleo' (ESTA ES LA MEDIDA CORRECTA, NO USE 'Prestaciones por desempleo').
+        2. Filtrar por 'region' en: ['Tenerife', 'Gran Canaria', 'Lanzarote', 'Fuerteventura', 'La Palma', 'La Gomera', 'El Hierro'].
     - Estéticas: 
-        * Variable 'year' mapeada al eje X (como continua o factor).
+        * Variable 'year' mapeada al eje X.
         * Variable 'value' mapeada al eje Y.
         * Variable 'region' mapeada al color (color).
         * Variable 'region' agrupada (group).
     - Geometría: Línea (geom_line).
-    - Etiquetas: 
-        * Título: 'Evolución de Prestaciones por Desempleo por Isla'.
-        * Eje X: 'Año'.
-        * Eje Y: 'Prestaciones por Desempleo'.
-    - Principio Gestalt (Continuidad): 
-        * Cada isla tiene su propia línea conectada a lo largo de los años.
+    - Etiquetas (OBLIGATORIO): 
+        * Título (ggtitle): 'Evolución de Desempleo por Isla'.
+        * Eje X (labs): 'Año'.
+        * Eje Y (labs): 'Porcentaje de Prestación por Desempleo'.
+        * Leyenda (color/group): 'Isla'.
+    - Ejes y Escalas:
+        * REGLA DE ORO: Antes de calcular min/max del año, asegúrate de que el dataframe filtrado NO esté vacío. 
+        * Si no está vacío: scale_x_continuous(breaks=range(int(df['year'].min()), int(df['year'].max())+1)).
+        * Las etiquetas del eje X deben ser años enteros sin decimales.
+    - REGLA CRÍTICA: Usa p9.ggtitle y p9.labs descriptivos.
     """
     return get_ia_template(None, desc, renta_cleaning)
 
@@ -206,6 +220,7 @@ def prompt_higher_ed_by_island_bar(nivel_estudios_cleaning):
         * Título: 'Total de Estudiantes de Educación Superior por Isla (2023)'.
         * Eje X: 'Isla'.
         * Eje Y: 'Total de Estudiantes'.
+        * Leyenda (fill): 'Isla'.
     - Principio Gestalt: 
         * Usar un color distinto para cada isla o colorear por isla para separarlas visualmente.
     """
@@ -237,7 +252,11 @@ def prompt_higher_ed_tf_gc_point(data_higher_ed_tf_gc):
         * Variable 'total' mapeada al eje Y.
         * Variable 'island' mapeada al color (color).
     - Geometría: Gráfico de puntos y líneas (geom_point() + geom_line(aes(group=island))).
-    - Título y Ejes: Usa ggtitle("Evolución de Estudiantes en Educación Superior: GC vs TF") y labs(y="Número de estudiantes", x="Año").
+    - Título y Ejes: Usa ggtitle("Evolución de Estudiantes en Educación Superior: GC vs TF"), labs(y="Número de estudiantes", x="Año") y labs(color="Isla").
+    - Escala y Ejes: 
+        * El eje X debe mostrar AÑOS ENTEROS. Usa scale_x_continuous(breaks=range(int(df['year'].min()), int(df['year'].max())+1)).
+        * El eje Y debe empezar en 0 y tener marcas cada 5000. 
+        * IMPORTANTE: Calcula el máximo del eje Y como entero: int(df['total'].max()). Use range(0, int(df['total'].max()) + 5001, 5000) para los breaks del eje Y.
     - Tema: theme_minimal().
     """
     return get_ia_template(None, desc, data_higher_ed_tf_gc)

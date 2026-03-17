@@ -3,6 +3,28 @@ import folium
 import json
 import os
 import webbrowser
+from branca.element import Element
+
+def map_island(code):
+    if not isinstance(code, str): return "Canarias"
+    if code.startswith("35"):
+        code_int = int(code)
+        FUERTEVENTURA = {35003, 35007, 35014, 35015, 35017, 35023}
+        LANZAROTE = {35004, 35010, 35019, 35022, 35024, 35028, 35029}
+        if code_int in FUERTEVENTURA: return "Fuerteventura"
+        if code_int in LANZAROTE: return "Lanzarote"
+        return "Gran Canaria"
+    if code.startswith("38"):
+        code_int = int(code)
+        LA_GOMERA = {38004, 38019, 38021, 38026, 38041}
+        EL_HIERRO = {38002, 38043, 38048}
+        LA_PALMA  = {38001, 38003, 38006, 38009, 38015, 38024,
+                     38027, 38030, 38033, 38036, 38037}
+        if code_int in EL_HIERRO: return "El Hierro"
+        if code_int in LA_PALMA: return "La Palma"
+        if code_int in LA_GOMERA: return "La Gomera"
+        return "Tenerife"
+    return "Canarias"
 
 @asset
 def interactive_municipality_map(context):
@@ -60,8 +82,6 @@ def interactive_municipality_map(context):
                 localize=True
             )
         ).add_to(fg_renta)
-        cmap_renta.caption = 'Población Activa'
-        m.add_child(cmap_renta)
         fg_renta.add_to(m)
 
     # 2. Población Ocupada
@@ -112,6 +132,60 @@ def interactive_municipality_map(context):
 
     # Añadir control de capas (Dropdown arriba a la derecha)
     folium.LayerControl(collapsed=False).add_to(m)
+
+    # 4. Lógica de Leyenda Dinámica (JS)
+    # Añadimos todas las leyendas
+    # --- Gestión de Leyendas ---
+    cmap_renta.caption = 'Población Activa'
+    cmap_pob.caption = 'Población Ocupada'
+    cmap_paro.caption = 'Tasa de Paro (%)'
+    
+    # Hide legends by default with CSS, we'll show them via JS
+    m.get_root().header.add_child(Element("<style>.legend { display: none; }</style>"))
+    
+    m.add_child(cmap_renta)
+    m.add_child(cmap_pob)
+    m.add_child(cmap_paro)
+
+    # Script para alternar leyendas
+    # Las leyendas en folium/branca se renderizan como divs con clase 'legend'
+    js_legend_toggle = """
+    <script>
+    function toggleLegends() {
+        var map = null;
+        for (var key in window) {
+            if (key.startsWith('map_') && window[key] instanceof L.Map) {
+                map = window[key];
+                break;
+            }
+        }
+        
+        if (map) {
+            function updateLegends(targetName) {
+                var legends = document.getElementsByClassName('legend');
+                for (var i = 0; i < legends.length; i++) {
+                    var legendText = legends[i].innerText || legends[i].textContent;
+                    if (legendText.includes(targetName)) {
+                        legends[i].style.display = 'block';
+                    } else {
+                        legends[i].style.display = 'none';
+                    }
+                }
+            }
+
+            map.on('baselayerchange', function(e) {
+                updateLegends(e.name);
+            });
+            
+            // Detectar capa inicial
+            var initialLayer = "Población Activa"; // Por defecto según orden de adición
+            updateLegends(initialLayer);
+        }
+    }
+    window.onload = toggleLegends;
+    </script>
+    """
+    m.get_root().html.add_child(Element(js_legend_toggle))
     
     # Ruta de salida para el HTML
     output_html_path = "plots/municipios_map.html"
