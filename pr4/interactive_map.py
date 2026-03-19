@@ -1,7 +1,7 @@
 from dagster import asset, Output, MetadataValue
 import folium
 import json
-import os
+import os, shutil
 import webbrowser
 from branca.element import Element
 
@@ -193,6 +193,11 @@ def interactive_municipality_map(context):
     
     # Guardar el mapa
     m.save(output_html_path)
+    
+    # --- Copia automática para GitHub Pages ---
+    docs_map_path = os.path.join("docs", "index_map.html")
+    os.makedirs(os.path.dirname(docs_map_path), exist_ok=True)
+    shutil.copy(output_html_path, docs_map_path)
     
     # Ejecutar un pequeño servidor de Python en esa carpeta, en segundo plano (puerto 8050)
     import subprocess

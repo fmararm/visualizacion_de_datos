@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import plotnine as p9
-import re, requests, subprocess, os
+import re, requests, subprocess, os, shutil
 from dagster import asset, Output, MetadataValue
 
 # --- Helpers para IA ---
@@ -72,6 +72,12 @@ def render_ia_viz(context, code, df, filename):
         plot = env['generar_plot'](df)
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         plot.save(filename, width=10, height=6, dpi=100)
+        
+        # --- Copia automática para GitHub Pages ---
+        docs_img_path = os.path.join("docs", "images", os.path.basename(filename))
+        os.makedirs(os.path.dirname(docs_img_path), exist_ok=True)
+        shutil.copy(filename, docs_img_path)
+        
         return filename
     except Exception as e:
         context.log.error(f"Error Render en {filename}: {e}\nCódigo:\n{code}")
