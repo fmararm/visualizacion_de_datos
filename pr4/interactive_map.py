@@ -233,3 +233,5 @@ def interactive_municipality_map(context):
             "mensaje": f"Mapa interactivo sirviéndose en {url}"
         }
     )
+
+
