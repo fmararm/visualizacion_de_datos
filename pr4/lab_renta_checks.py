@@ -4,7 +4,7 @@ from dagster import asset_check, AssetCheckResult, MetadataValue
 from lab_renta import (
     renta_load, renta_cleaning, income_distribution_boxplot,
     unemployment_trend_by_region, nivel_estudios_load, nivel_estudios_cleaning,
-    higher_ed_by_island_bar
+    higher_ed_by_island_bar, data_higher_ed_tf_gc
 )
 
 # 1. renta_load: test_integridad_critica (Logic: 5% Null Tolerance)
@@ -106,3 +106,76 @@ def test_homogeneidad_texto_estudios(nivel_estudios_cleaning):
 @asset_check(asset=higher_ed_by_island_bar)
 def test_coherencia_cromatica_island(higher_ed_by_island_bar):
     return test_file_integrity_advanced(higher_ed_by_island_bar, "Identidad", "Similitud")
+
+# --- Nuevos Checks Avanzados (Gestalt & Grammar of Graphics) ---
+
+# 10. renta_cleaning: test_variabilidad_boxplots (Grammar: Scale/Geometry)
+@asset_check(asset=renta_cleaning)
+def test_variabilidad_boxplots(renta_cleaning):
+    # El boxplot necesita que el IQR sea > 0 para mostrar una caja significativa
+    stats = renta_cleaning.groupby('measure')['value'].describe()
+    num_flat_categories = (stats['75%'] == stats['25%']).sum()
+    passed = bool(num_flat_categories == 0)
+    return AssetCheckResult(
+        passed=passed,
+        metadata={
+            "categorias_sin_iqr": MetadataValue.int(int(num_flat_categories)),
+            "description": "Verifica que el IQR sea > 0 para permitir geometría de boxplot.",
+            "gestalt": "Destino Común"
+        }
+    )
+
+# 11. renta_cleaning: test_continuidad_temporal (Gestalt: Continuity)
+@asset_check(asset=renta_cleaning)
+def test_continuidad_temporal(renta_cleaning):
+    # En un gráfico de líneas, queremos ver series continuas sin 'saltos' visuales
+    islands_data = renta_cleaning.groupby(['region', 'measure'])['year'].agg(['min', 'max', 'count'])
+    islands_data['range'] = islands_data['max'] - islands_data['min'] + 1
+    # Si el conteo es igual al rango, no hay huecos temporales
+    has_gaps = (islands_data['count'] < islands_data['range']).any()
+    passed = bool(not has_gaps)
+    return AssetCheckResult(
+        passed=passed,
+        metadata={
+            "series_con_huecos": MetadataValue.int(int(has_gaps)),
+            "description": "Busca huecos temporales que rompan la continuidad visual de las líneas.",
+            "gestalt": "Continuidad"
+        }
+    )
+
+# 12. nivel_estudios_cleaning: test_punto_focal_islas (Gestalt: Focal Point)
+@asset_check(asset=nivel_estudios_cleaning)
+def test_punto_focal_islas(nivel_estudios_cleaning):
+    # Buscamos que haya un 'ancla' visual (una isla que destaque claramente)
+    island_totals = nivel_estudios_cleaning.groupby('island')['total'].sum()
+    if island_totals.empty: return AssetCheckResult(passed=False, metadata={"error": "No hay datos"})
+    max_val = island_totals.max()
+    mean_val = island_totals.mean()
+    # Si el máximo es al menos un 15% superior a la media, hay un punto focal claro
+    passed = bool(max_val > (mean_val * 1.15))
+    return AssetCheckResult(
+        passed=passed,
+        metadata={
+            "ratio_max_media": MetadataValue.float(float(max_val / mean_val)),
+            "description": "Valida la existencia de un punto focal visual (una isla dominante).",
+            "gestalt": "Punto Focal"
+        }
+    )
+
+# 13. data_higher_ed_tf_gc: test_proximidad_comparativa (Gestalt: Proximity)
+@asset_check(asset=data_higher_ed_tf_gc)
+def test_proximidad_comparativa(data_higher_ed_tf_gc):
+    # Comparar Tenerife y Gran Canaria requiere que estén en escalas similares
+    totals = data_higher_ed_tf_gc.groupby('island')['total'].mean()
+    if len(totals) < 2: return AssetCheckResult(passed=True, metadata={"info": "Menos de 2 islas para comparar"})
+    ratio = totals.max() / totals.min()
+    # Si la diferencia es excesiva (>2x), la proximidad visual se pierde
+    passed = bool(ratio < 2.0)
+    return AssetCheckResult(
+        passed=passed,
+        metadata={
+            "ratio_comparativo": MetadataValue.float(float(ratio)),
+            "description": "Asegura que las magnitudes sean comparables sin distorsionar la escala.",
+            "gestalt": "Proximidad"
+        }
+    )
