@@ -107,8 +107,6 @@ def test_homogeneidad_texto_estudios(nivel_estudios_cleaning):
 def test_coherencia_cromatica_island(higher_ed_by_island_bar):
     return test_file_integrity_advanced(higher_ed_by_island_bar, "Identidad", "Similitud")
 
-# --- Nuevos Checks Avanzados (Gestalt & Grammar of Graphics) ---
-
 # 10. renta_cleaning: test_variabilidad_boxplots (Grammar: Scale/Geometry)
 @asset_check(asset=renta_cleaning)
 def test_variabilidad_boxplots(renta_cleaning):

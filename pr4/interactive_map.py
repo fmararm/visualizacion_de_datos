@@ -134,76 +134,107 @@ def interactive_municipality_map(context):
     folium.LayerControl(collapsed=False).add_to(m)
 
     # 4. Lógica de Leyenda Dinámica (JS)
-    # --- Gestión de Leyendas ---
+ # --- Gestión de Leyendas ---
     cmap_renta.caption = 'Población Activa'
-    cmap_pob.caption = 'Población Ocupada'
-    cmap_paro.caption = 'Tasa de Paro (%)'
-    
-    # CSS: Forzamos a todas las leyendas a ocupar el mismo espacio arriba a la derecha.
-    # El uso de 'display: none' asegura que no se apilen verticalmente.
+    cmap_pob.caption   = 'Población Ocupada'
+    cmap_paro.caption  = 'Tasa de Paro (%)'
+
+    # NO asignamos _id — branca lo ignora. Identificamos por caption.
+    LAYER_TO_CAPTION = {
+        'Población Activa':  'Población Activa',
+        'Población Ocupada': 'Población Ocupada',
+        'Tasa de Paro (%)':  'Tasa de Paro (%)',
+    }
+
     m.get_root().header.add_child(Element("""
     <style>
-        .legend { 
-            display: none; 
-            position: fixed !important; 
-            top: 10px !important; 
-            right: 10px !important; 
+        .legend {
+            display: none !important;
+            position: fixed !important;
+            bottom: 30px !important;
+            right: 10px  !important;
             z-index: 1000 !important;
-            background: rgba(255,255,255,0.85);
+            background: rgba(255,255,255,0.9);
             border: 1px solid #777;
             padding: 8px;
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
-    </style>"""))
-    
+        .legend.legend-visible {
+            display: block !important;
+        }
+    </style>
+    """))
+
     m.add_child(cmap_renta)
     m.add_child(cmap_pob)
     m.add_child(cmap_paro)
 
-    # Script para alternar leyendas basado en el nombre de la capa activa (Población Activa, etc.)
-    js_legend_toggle = """
-    <script>
-    function toggleLegends() {
-        var mapInstance = null;
-        // Buscamos la instancia del mapa de Folium/Leaflet
-        for (var key in window) {
-            if (key.startsWith('map_') && window[key] instanceof L.Map) {
-                mapInstance = window[key];
-                break;
-            }
-        }
-        
-        if (mapInstance) {
-            function updateLegends(targetName) {
-                var legends = document.getElementsByClassName('legend');
-                for (var i = 0; i < legends.length; i++) {
-                    // El texto de la leyenda (caption) está dentro del SVG o div
-                    var legendContent = legends[i].innerHTML || "";
-                    if (legendContent.includes(targetName)) {
-                        legends[i].style.display = 'block';
-                    } else {
-                        legends[i].style.display = 'none';
-                    }
-                }
-            }
+    layer_map_js = json.dumps(LAYER_TO_CAPTION)
 
-            // Escuchar el cambio de capa base
-            mapInstance.on('baselayerchange', function(e) {
-                updateLegends(e.name);
-            });
-            
-            // Inicializar con la primera capa tras un breve retardo para que el DOM esté listo
-            setTimeout(function() {
-                updateLegends("Población Activa");
-            }, 300);
-        }
-    }
-    window.onload = toggleLegends;
+    js_legend_toggle = f"""
+    <script>
+    (function() {{
+        var LAYER_TO_CAPTION = {layer_map_js};
+
+        function findLegendByCaption(caption) {{
+            // Branca renderiza el caption dentro de un <div class="legend"> como texto
+            // Buscamos el .legend cuyo texto interno contenga el caption buscado
+            var legends = document.querySelectorAll('.legend');
+            for (var i = 0; i < legends.length; i++) {{
+                if (legends[i].innerText && legends[i].innerText.includes(caption)) {{
+                    return legends[i];
+                }}
+            }}
+            return null;
+        }}
+
+        function showLegendForLayer(layerName) {{
+            // Ocultamos todas
+            document.querySelectorAll('.legend').forEach(function(el) {{
+                el.classList.remove('legend-visible');
+            }});
+            // Mostramos solo la que corresponde
+            var caption = LAYER_TO_CAPTION[layerName];
+            if (caption) {{
+                var el = findLegendByCaption(caption);
+                if (el) {{ el.classList.add('legend-visible'); }}
+            }}
+        }}
+
+        function init() {{
+            var mapInstance = null;
+            for (var key in window) {{
+                try {{
+                    if (key.startsWith('map_') && window[key] instanceof L.Map) {{
+                        mapInstance = window[key];
+                        break;
+                    }}
+                }} catch(e) {{}}
+            }}
+            if (!mapInstance) {{ return; }}
+
+            mapInstance.on('baselayerchange', function(e) {{
+                showLegendForLayer(e.name);
+            }});
+
+            // Capa inicial activa al cargar
+            setTimeout(function() {{
+                showLegendForLayer('Población Activa');
+            }}, 700);
+        }}
+
+        if (document.readyState === 'loading') {{
+            document.addEventListener('DOMContentLoaded', init);
+        }} else {{
+            // El DOM ya está listo pero Leaflet puede no estarlo aún
+            setTimeout(init, 100);
+        }}
+    }})();
     </script>
     """
     m.get_root().html.add_child(Element(js_legend_toggle))
-    
+
     # Ruta de salida para el HTML
     output_html_path = "plots/municipios_map.html"
     os.makedirs(os.path.dirname(output_html_path), exist_ok=True)
