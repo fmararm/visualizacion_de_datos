@@ -141,7 +141,10 @@ def plot(path: str, caption: str = "", insight: str = "", width: int = None):
     if not p.exists():
         st.warning(f"Imagen no encontrada: {path}")
         return
-    st.image(str(p), use_column_width=(width is None), width=width)
+    if width is None:
+        st.image(str(p), use_container_width=True)
+    else:
+        st.image(str(p), width=width)
     if caption:
         st.markdown(f'<div class="caption-box">{caption}</div>', unsafe_allow_html=True)
     if insight:
@@ -154,6 +157,7 @@ def plot(path: str, caption: str = "", insight: str = "", width: int = None):
 SECCIONES = [
     "Introducción",
     "La fractura de la renta",
+    "Recuperación post-COVID",
     "Desigualdad interna",
     "Actividad y ocupación",
     "Brecha de género",
@@ -194,7 +198,8 @@ if seccion == "Introducción":
     st.markdown("""
 | Sección | Qué muestra |
 |---|---|
-| La fractura de la renta | Ranking de municipios, distribución y evolución temporal |
+| La fractura de la renta | Ranking de municipios y distribución de la renta |
+| Recuperación post-COVID | Evolución de la renta por municipio e isla (2021-2023) |
 | Desigualdad interna | Desigualdad dentro de cada municipio e isla, correlación con ocupación |
 | Actividad y ocupación | Composición del empleo y cómo varía según el nivel de renta |
 | Brecha de género | Diferencias por sexo en las categorías de ocupación |
@@ -222,7 +227,8 @@ elif seccion == "La fractura de la renta":
         "plots/renta/lollipop_ranking_municipios.png",
         caption=(
             "Primeros y últimos 15 municipios de Tenerife ordenados por renta neta media "
-            "por hogar (2023). La distancia entre el primero y el último supera el factor 2."
+            "por hogar (2023). La distancia entre el primero y el último supera el factor 2. "
+            "Datos: rentamedia-sc-3.csv."
         ),
         insight=(
             "Los municipios del sur turístico aparecen en posiciones intermedias. "
@@ -232,59 +238,80 @@ elif seccion == "La fractura de la renta":
         ),
     )
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Distribución de la renta")
-        plot(
-            "plots/renta/histograma_hist_renta.png",
-            caption=(
-                "Histograma de la renta neta media por sección censal (2023). "
-                "La distribución es asimétrica positiva: la mayoría de secciones "
-                "se concentra entre 25.000 y 45.000 euros, pero una cola larga "
-                "de secciones muy ricas eleva artificialmente la media."
-            ),
-            insight=(
-                "La media estadística de la isla miente sobre la experiencia "
-                "de la mayoría. Gran parte de las secciones censales vive "
-                "por debajo de ella. Los outliers de la cola derecha no son "
-                "la norma: son la excepción que distorsiona el promedio."
-            ),
-        )
-    with col2:
-        st.subheader("Evolución 2021-2023")
-        plot(
-            "plots/renta/heatmap_renta_municipio.png",
-            caption=(
-                "Heatmap de renta media por municipio y año (2021-2023). "
-                "Verde intenso indica renta alta; amarillo, renta baja. "
-                "El orden de los municipios es constante en los tres años."
-            ),
-            insight=(
-                "Tres años de datos cuentan la misma historia: los municipios "
-                "ricos permanecen verdes y los pobres no salen del amarillo. "
-                "La pandemia no igualó. El boom turístico no igualó. "
-                "La jerarquía económica de la isla es estructural."
-            ),
-        )
-
-    st.subheader("Quién mejoró y quién quedó atrás (2021-2023)")
+    st.subheader("Distribución de la renta")
     plot(
-        "plots/renta/slope_brecha_temporal.png",
+        "plots/renta/histograma_hist_renta.png",
         caption=(
-            "Slope chart de la renta por municipio entre 2021 y 2023. "
-            "Líneas rojas: municipios que pierden posición relativa. "
-            "Líneas verdes: municipios que mejoran."
+            "Histograma de la renta neta media por sección censal (2023). "
+            "La distribución es asimétrica positiva: la mayoría de secciones "
+            "se concentra entre 25.000 y 45.000 euros, pero una cola larga "
+            "de secciones muy ricas eleva artificialmente la media. "
+            "Datos: rentamedia-sc-3.csv."
         ),
         insight=(
-            "El crecimiento existe, pero tiene dueños claros. "
-            "Los municipios que ya partían de una posición baja crecen "
-            "proporcionalmente menos que los que ya eran ricos. "
-            "La fractura no se cierra: se consolida."
+            "La media estadística de la isla miente sobre la experiencia "
+            "de la mayoría. Gran parte de las secciones censales vive "
+            "por debajo de ella. Los outliers de la cola derecha no son "
+            "la norma: son la excepción que distorsiona el promedio."
         ),
     )
 
 # ===========================================================================
-# 3. DESIGUALDAD INTERNA
+# 3. RECUPERACIÓN POST-COVID
+# ===========================================================================
+elif seccion == "Recuperación post-COVID":
+    st.header("Recuperación post-COVID")
+    st.markdown(
+        '<p class="section-intro">'
+        "Los datos de 2021 a 2023 cubren la fase de recuperación tras la pandemia. "
+        "No todos los municipios salieron igual: algunos recuperaron posición relativa, "
+        "otros la perdieron. El color de cada celda refleja la renta media de ese municipio "
+        "en ese año. Comparar las columnas permite ver quién remontó y quién se quedó atrás."
+        "</p>",
+        unsafe_allow_html=True,
+    )
+
+    tabs = st.tabs(["Tenerife", "La Palma", "La Gomera", "El Hierro"])
+    configs = [
+        (
+            "plots/renta/heatmap_renta_tenerife.png",
+            "Tenerife (2021-2023). Verde intenso indica renta alta, rojo indica renta baja. "
+            "Municipios ordenados de menor a mayor renta en 2023. "
+            "Datos: rentamedia-sc-3.csv.",
+            "Los municipios del norte de Tenerife mantienen el verde a lo largo de los tres años. "
+            "Los del sur turístico muestran colores más cálidos: el empleo que genera el turismo "
+            "no se traduce en renta alta para sus residentes."
+        ),
+        (
+            "plots/renta/heatmap_renta_la_palma.png",
+            "La Palma (2021-2023). La isla acusó especialmente el impacto de la erupción del "
+            "volcán Tajogaite (2021), que afectó a varios municipios del sur. "
+            "Datos: rentamedia-sc-3.csv.",
+            "El deterioro visible en algunos municipios palmeros no es solo económico: "
+            "refleja la destrucción de viviendas, infraestructuras y cultivos. "
+            "La recuperación es lenta y desigual."
+        ),
+        (
+            "plots/renta/heatmap_renta_la_gomera.png",
+            "La Gomera (2021-2023). Pocos municipios y base económica estrecha "
+            "hacen que cualquier variación sea más pronunciada. "
+            "Datos: rentamedia-sc-3.csv.",
+            None
+        ),
+        (
+            "plots/renta/heatmap_renta_el_hierro.png",
+            "El Hierro (2021-2023). Solo 3 municipios. "
+            "La isla con menor renta media de la provincia muestra poca variación entre años. "
+            "Datos: rentamedia-sc-3.csv.",
+            None
+        ),
+    ]
+    for tab, (img, cap, ins) in zip(tabs, configs):
+        with tab:
+            plot(img, caption=cap, insight=ins)
+
+# ===========================================================================
+# 4. DESIGUALDAD INTERNA
 # ===========================================================================
 elif seccion == "Desigualdad interna":
     st.header("Desigualdad interna")
@@ -309,8 +336,9 @@ elif seccion == "Desigualdad interna":
     configs = [
         (
             "plots/renta/boxplot_desigualdad_intramunicipal_tenerife.png",
-            "Tenerife. Cada caja representa un municipio; los puntos son secciones atípicas. "
-            "El rango intercuartílico de Santa Cruz y La Laguna es el más amplio de toda la provincia.",
+            "Tenerife. Cada caja representa un municipio. Los puntos son secciones atípicas. "
+            "El rango intercuartílico de Santa Cruz y La Laguna es el más amplio de toda la provincia. "
+            "Datos: rentamedia-sc-3.csv.",
             "Santa Cruz de Tenerife tiene secciones censales con rentas superiores a 80.000 euros "
             "por hogar y otras que no alcanzan los 20.000 euros. La misma ciudad, "
             "dos realidades económicas que no se tocan."
@@ -318,19 +346,22 @@ elif seccion == "Desigualdad interna":
         (
             "plots/renta/boxplot_desigualdad_intramunicipal_la_palma.png",
             "La Palma. Distribuciones más compactas que Tenerife, "
-            "pero Santa Cruz de La Palma concentra la mayor dispersión de la isla.",
+            "pero Santa Cruz de La Palma concentra la mayor dispersión de la isla. "
+            "Datos: rentamedia-sc-3.csv.",
             None
         ),
         (
             "plots/renta/boxplot_desigualdad_intramunicipal_la_gomera.png",
             "La Gomera. Pocos municipios y pocas secciones. "
-            "San Sebastián de La Gomera presenta la renta más alta y la mayor dispersión.",
+            "San Sebastián de La Gomera presenta la renta más alta y la mayor dispersión. "
+            "Datos: rentamedia-sc-3.csv.",
             None
         ),
         (
             "plots/renta/boxplot_desigualdad_intramunicipal_el_hierro.png",
             "El Hierro. Solo 3 municipios. Rentas sistemáticamente más bajas que el resto "
-            "del archipiélago, con poca variabilidad interna.",
+            "del archipiélago, con poca variabilidad interna. "
+            "Datos: rentamedia-sc-3.csv.",
             "El Hierro es la isla con menor renta media y también la que tiene menor "
             "desigualdad interna. Cuando todos son pobres por igual, la caja se estrecha."
         ),
@@ -345,7 +376,8 @@ elif seccion == "Desigualdad interna":
         caption=(
             "Scatter de secciones censales: eje X = porcentaje de trabajadores en ocupaciones "
             "elementales, eje Y = renta neta media, tamaño de burbuja = número total de trabajadores "
-            "(2023). Línea de tendencia en rojo."
+            "(2023). Línea de tendencia en rojo. "
+            "Datos: rentamedia-sc-3.csv, ocupacion-sc-3.csv."
         ),
         insight=(
             "La pendiente no engaña. Cuanto mayor el peso de las ocupaciones elementales, "
@@ -378,7 +410,8 @@ elif seccion == "Actividad y ocupación":
             "plots/renta/waterfall_fuentes_ingresos.png",
             caption=(
                 "Composición media de ingresos por sección censal en Tenerife (2023). "
-                "Cada barra representa el peso porcentual de cada fuente sobre el total."
+                "Cada barra representa el peso porcentual de cada fuente sobre el total. "
+                "Datos: distribucion-renta-ingresos.csv."
             ),
             insight=(
                 "Las pensiones tienen un peso desproporcionado. Tenerife envejece, "
@@ -393,7 +426,8 @@ elif seccion == "Actividad y ocupación":
             "plots/actividad/waterfall_actividades.png",
             caption=(
                 "Porcentaje de trabajadores por sector CNAE en Tenerife (2023). "
-                "Los Servicios concentran más del 85% del empleo."
+                "Los Servicios concentran más del 85% del empleo. "
+                "Datos: actividad-sc-3.csv."
             ),
             insight=(
                 "Una sola crisis en el turismo golpea a casi toda la fuerza de trabajo activa. "
@@ -410,12 +444,13 @@ elif seccion == "Actividad y ocupación":
             "plots/renta/grouped_bar_ingresos_quintiles.png",
             caption=(
                 "Porcentaje de trabajadores en cada sector de actividad según quintil de renta (2023). "
-                "Q1 = 20% más pobre, Q5 = 20% más rico."
+                "Q1 = 20% más pobre, Q5 = 20% más rico. "
+                "Datos: rentamedia-sc-3.csv, actividad-sc-3.csv."
             ),
             insight=(
                 "El Q5 trabaja en Servicios financieros, de gestión y consultoría. "
                 "El Q1 trabaja en hostelería, limpieza y comercio minorista. "
-                "La etiqueta sectorial es idéntica; la realidad económica, opuesta."
+                "La etiqueta sectorial es idéntica. La realidad económica, opuesta."
             ),
         )
     with col2:
@@ -424,7 +459,8 @@ elif seccion == "Actividad y ocupación":
             "plots/renta/grouped_bar_ocupacion_quintiles.png",
             caption=(
                 "Porcentaje de trabajadores en cada categoría de ocupación según quintil de renta (2023). "
-                "La composición cambia drásticamente del Q1 al Q5."
+                "La composición cambia drásticamente del Q1 al Q5. "
+                "Datos: rentamedia-sc-3.csv, ocupacion-sc-3.csv."
             ),
             insight=(
                 "Del Q1 al Q5, la categoría 'Directores y técnicos' pasa del 20% al 51%. "
@@ -456,7 +492,8 @@ elif seccion == "Brecha de género":
         caption=(
             "Desviación porcentual respecto a la paridad (50/50) para cada categoría "
             "de ocupación en Tenerife (2023). "
-            "Barras a la derecha = más mujeres; a la izquierda = más hombres."
+            "Barras a la derecha = más mujeres, a la izquierda = más hombres. "
+            "Datos: ocupacion-sc-3.csv."
         ),
         insight=(
             "Las mujeres están sobrerrepresentadas en las ocupaciones elementales, "
@@ -479,7 +516,8 @@ elif seccion == "Mapa interactivo":
         "renta neta media por hogar, porcentaje de ingresos por desempleo "
         "y porcentaje de trabajadores en Servicios. "
         "Cambia de capa para ver cómo se superponen las distintas caras de la desigualdad "
-        "sobre el mismo territorio."
+        "sobre el mismo territorio. "
+        "Datos: rentamedia-sc-3.csv, distribucion-renta-ingresos.csv, actividad-sc-3.csv."
         "</p>",
         unsafe_allow_html=True,
     )

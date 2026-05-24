@@ -151,7 +151,7 @@ A continuación se analiza cada visualización generada siguiendo la gramática 
 \end{figure}
 
 \begin{itemize}
-  \item Datos: tabla con un registro por municipio; columnas municipio (cadena) y renta\_media (numérico, euros).
+  \item Datos: tabla con un registro por municipio; columnas municipio (cadena) y renta\_media (numérico, euros). Fichero fuente: rentamedia-sc-3.csv.
   \item Mapeos:
     \begin{itemize}
       \item x = municipio (variable categórica, ordenada por renta de menor a mayor)
@@ -180,7 +180,7 @@ El lollipop es preferible al gráfico de barras cuando hay muchas categorías: l
 \end{figure}
 
 \begin{itemize}
-  \item Datos: tabla con un registro por sección censal; columna renta\_neta.
+  \item Datos: tabla con un registro por sección censal; columna renta\_neta. Fichero fuente: rentamedia-sc-3.csv.
   \item Mapeos: x = renta\_neta.
   \item Geometrías: geom\_histogram (bins=40) + geom\_vline para indicar la mediana.
   \item Escalas: eje X continuo en euros; eje Y de frecuencia absoluta.
@@ -200,7 +200,7 @@ El histograma revela la asimetría positiva (cola derecha larga) característica
 \end{figure}
 
 \begin{itemize}
-  \item Datos: cinco filas, una por fuente de ingresos; columnas fuente y pct (porcentaje del total).
+  \item Datos: cinco filas, una por fuente de ingresos; columnas fuente y pct (porcentaje del total). Fichero fuente: distribucion-renta-ingresos.csv.
   \item Mapeos: x = fuente (categórica), y = pct, fill = fuente.
   \item Geometrías: geom\_col con las barras apiladas en cascada (waterfall): cada barra comienza donde termina la anterior, de modo que la suma acumulada avanza de izquierda a derecha hasta el 100\%.
   \item Escalas: eje Y en porcentaje; paleta de colores divergente para distinguir fuentes activas (sueldos) de pasivas (pensiones, prestaciones).
@@ -228,7 +228,7 @@ Mismo esquema que el anterior pero para los cuatro sectores CNAE: Servicios, Ind
 \end{figure}
 
 \begin{itemize}
-  \item Datos: tabla con un registro por categoría de ocupación; columnas ocupacion, desviacion (porcentaje de mujeres menos 50) y mayoria ("Más mujeres" / "Más hombres").
+  \item Datos: tabla con un registro por categoría de ocupación; columnas ocupacion, desviacion (porcentaje de mujeres menos 50) y mayoria ("Más mujeres" / "Más hombres"). Fichero fuente: ocupacion-sc-3.csv.
   \item Mapeos:
     \begin{itemize}
       \item x = ocupacion (categórica, ordenada por desviación)
@@ -248,7 +248,7 @@ El diverging bar es el tipo de gráfico más adecuado para mostrar desviaciones 
 \section{Box plots: desigualdad intramunicipal por isla}
 
 \begin{itemize}
-  \item Datos: un registro por sección censal con columnas municipio e isla. Se filtra por isla y se genera un PNG independiente por isla.
+  \item Datos: un registro por sección censal con columnas municipio e isla. Se filtra por isla y se genera un PNG independiente por isla. Fichero fuente: rentamedia-sc-3.csv.
   \item Mapeos: x = municipio (categórica, ordenada por mediana), y = renta\_neta.
   \item Geometrías: geom\_boxplot con outlier\_size=0.8 (puntos pequeños para los valores atípicos).
   \item Escalas: eje Y continuo en euros.
@@ -293,7 +293,7 @@ Generar un PNG por isla en lugar de un único gráfico con facetas permite adapt
 \end{figure}
 
 \begin{itemize}
-  \item Datos: un registro por municipio; columnas pct\_elementales (porcentaje de trabajadores con nivel formativo elemental) y renta\_neta (renta media).
+  \item Datos: un registro por municipio; columnas pct\_elementales (porcentaje de trabajadores con nivel formativo elemental) y renta\_neta (renta media). Ficheros fuente: rentamedia-sc-3.csv, ocupacion-sc-3.csv.
   \item Mapeos: x = pct\_elementales, y = renta\_neta, label = municipio (para identificar puntos extremos).
   \item Geometrías: geom\_point + geom\_smooth(method='lm') (regresión lineal) + geom\_text para las etiquetas.
   \item Escalas: ambos ejes continuos; eje X en porcentaje.
@@ -313,7 +313,7 @@ La correlación negativa esperada (a mayor porcentaje de trabajadores con estudi
 \end{figure}
 
 \begin{itemize}
-  \item Datos: tabla con columnas quintil (1--5), actividad (sector CNAE) y pct (porcentaje de trabajadores).
+  \item Datos: tabla con columnas quintil (1--5), actividad (sector CNAE) y pct (porcentaje de trabajadores). Ficheros fuente: rentamedia-sc-3.csv, actividad-sc-3.csv.
   \item Mapeos: x = quintil, y = pct, fill = actividad.
   \item Geometrías: geom\_col(position='dodge') (barras agrupadas, no apiladas).
   \item Escalas: eje Y en porcentaje; paleta de colores cualitativos para los cuatro sectores.
@@ -330,7 +330,7 @@ La correlación negativa esperada (a mayor porcentaje de trabajadores con estudi
 \caption{Distribución de trabajadores por categoría de ocupación y quintil de renta (2023).}
 \end{figure}
 
-Mismo esquema que el anterior, pero la variable de agrupación es la categoría de ocupación (CNO) en lugar del sector de actividad. Se incluyen las tres categorías más informativas desde el punto de vista de la desigualdad: directores/técnicos, trabajadores cualificados y ocupaciones elementales. Los colores siguen un esquema semafórico: verde para la ocupación de mayor renta, rojo para la de menor.
+Mismo esquema que el anterior, pero la variable de agrupación es la categoría de ocupación (CNO) en lugar del sector de actividad. Se incluyen las tres categorías más informativas desde el punto de vista de la desigualdad: directores/técnicos, trabajadores cualificados y ocupaciones elementales. Los colores siguen un esquema semafórico: verde para la ocupación de mayor renta, rojo para la de menor. Ficheros fuente: rentamedia-sc-3.csv, ocupacion-sc-3.csv.
 
 \section{Heatmap: evolución de la renta municipal 2021--2023}
 
@@ -341,7 +341,7 @@ Mismo esquema que el anterior, pero la variable de agrupación es la categoría 
 \end{figure}
 
 \begin{itemize}
-  \item Datos: tabla con columnas municipio, año (2021, 2022, 2023) y renta\_norm (renta normalizada en [0,1] para poder comparar dentro del mismo municipio a lo largo del tiempo).
+  \item Datos: tabla con columnas municipio, año (2021, 2022, 2023) y renta\_norm (renta normalizada en [0,1] para poder comparar dentro del mismo municipio a lo largo del tiempo). Fichero fuente: rentamedia-sc-3.csv.
   \item Mapeos: x = año, y = municipio (ordenado por renta media), fill = renta\_norm.
   \item Geometrías: geom\_tile.
   \item Escalas: escala de color divergente (RdYlGn): rojo para renta baja, verde para renta alta.
@@ -402,25 +402,25 @@ En la siguiente tabla se recoge para cada visualización qué principios de la g
 \toprule
 Gráfico & Principio(s) & Justificación \\
 \midrule
-Lollipop ranking & Figura-Fondo, Punto Focal & La línea delgada reduce el ruido visual (figura-fondo); el punto actúa como elemento focal que guía la lectura del valor preciso. \\
+Lollipop ranking & Figura-Fondo, Punto Focal & La línea delgada reduce el ruido visual (figura-fondo). El punto actúa como elemento focal que guía la lectura del valor preciso. \\
 \addlinespace
-Histograma renta & Proximidad, Figura-Fondo & Los bins adyacentes que comparten rango se perciben como grupo; el fondo blanco realza la distribución. \\
+Histograma renta & Proximidad, Figura-Fondo & Los bins adyacentes que comparten rango se perciben como grupo. El fondo blanco realza la distribución. \\
 \addlinespace
-Waterfall fuentes & Continuidad, Parte-Todo & Las barras encadenadas crean una línea de acumulación continua que comunica la composición del total; cada segmento es una parte del 100\%. \\
+Waterfall fuentes & Continuidad, Parte-Todo & Las barras encadenadas crean una línea de acumulación continua que comunica la composición del total, donde cada segmento es una parte del 100\%. \\
 \addlinespace
-Waterfall actividades & Continuidad, Parte-Todo & Mismo principio; la dominancia del sector servicios se percibe inmediatamente por la anchura relativa. \\
+Waterfall actividades & Continuidad, Parte-Todo & Mismo principio. La dominancia del sector servicios se percibe inmediatamente por la anchura relativa. \\
 \addlinespace
-Diverging bar género & Destino Común, Simetría & Las barras que se extienden hacia lados opuestos convergen en el eje de paridad; la simetría rota evidencia el desequilibrio. \\
+Diverging bar género & Destino Común, Simetría & Las barras que se extienden hacia lados opuestos convergen en el eje de paridad. La simetría rota evidencia el desequilibrio. \\
 \addlinespace
-Box plots (islas) & Distribución, Punto Focal & La caja muestra la distribución completa; la mediana como línea central actúa de punto focal para la comparación entre municipios. \\
+Box plots (islas) & Distribución, Punto Focal & La caja muestra la distribución completa, y la mediana como línea central actúa de punto focal para la comparación entre municipios. \\
 \addlinespace
 Scatter & Correlación, Destino Común & Los puntos que forman una nube orientada negativamente señalan un destino común: a más educación elemental, menor renta. \\
 \addlinespace
-Grouped bar quintiles & Magnitud, Proximidad & Las barras agrupadas permiten comparar magnitudes entre quintiles; la proximidad física de las barras del mismo quintil facilita la comparación intragrupo. \\
+Grouped bar quintiles & Magnitud, Proximidad & Las barras agrupadas permiten comparar magnitudes entre quintiles. La proximidad física de las barras del mismo quintil facilita la comparación intragrupo. \\
 \addlinespace
 Grouped bar ocupación & Magnitud, Proximidad & Mismo principio aplicado a las categorías de ocupación. \\
 \addlinespace
-Heatmap & Cambio Temporal, Similitud & El color codifica magnitud; celdas del mismo tono se perciben como similares. La organización temporal en columnas facilita ver la evolución. \\
+Heatmap & Cambio Temporal, Similitud & El color codifica magnitud, y las celdas del mismo tono se perciben como similares. La organización temporal en columnas facilita ver la evolución. \\
 \addlinespace
 Mapa interactivo & Figura-Fondo, Punto Focal & El gradiente de color sobre fondo neutro enfoca la atención en las diferencias espaciales de renta. \\
 \bottomrule
