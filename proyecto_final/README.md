@@ -145,6 +145,42 @@ start docs/index_map.html         # Windows
 
 ---
 
+## Dashboard interactivo
+
+El dashboard muestra todos los gráficos generados con texto explicativo y permite navegar por las secciones del análisis.
+
+### Requisito previo
+
+Asegúrate de que los assets de Dagster están materializados (los archivos PNG deben existir en `plots/`). Si no lo están, ejecuta primero:
+
+```bash
+dagster asset materialize -f definitions.py --select "*"
+```
+
+### Arrancar el dashboard
+
+```bash
+source .venv/bin/activate   # si no está ya activado
+streamlit run dashboard.py --server.port 8501
+```
+
+Se abre en **[http://localhost:8501](http://localhost:8501)**.
+
+El menú lateral permite navegar entre seis secciones:
+
+| Sección | Contenido |
+|---------|-----------|
+| Mapa interactivo | Mapa coroplético de secciones censales coloreado por renta |
+| Distribución de la renta | Lollipop de ranking de municipios e histograma |
+| Composición económica | Waterfall de fuentes de ingresos y sectores de actividad |
+| Desigualdad y brecha de género | Slope chart 2021–2023 y diverging bar de género |
+| Desigualdad intramunicipal | Box plots por isla |
+| Educación y quintiles | Scatter de nivel formativo y grouped bars por quintil |
+
+Para parar el servidor pulsa `Ctrl+C` en la terminal.
+
+---
+
 ## Pipeline de assets
 
 ```

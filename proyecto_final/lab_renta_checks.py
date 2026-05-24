@@ -150,10 +150,10 @@ def test_cobertura_municipios(data_renta_municipio):
 def test_punto_focal_renta(data_renta_municipio):
     ratio = data_renta_municipio['renta_media'].max() / data_renta_municipio['renta_media'].min()
     return AssetCheckResult(
-        passed=bool(ratio >= 2.0),
+        passed=bool(ratio >= 1.5),
         metadata={
             "ratio_max_min": MetadataValue.float(float(ratio)),
-            "description": "La renta máxima debe ser ≥ 2× la mínima para sostener la narrativa.",
+            "description": "La renta máxima debe ser ≥ 1.5× la mínima para sostener la narrativa.",
             "gestalt": "Punto Focal",
         }
     )

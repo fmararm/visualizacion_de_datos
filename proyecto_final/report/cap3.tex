@@ -1,0 +1,22 @@
+El CF falla con usuarios nuevos, el contenido falla cuando las etiquetas no capturan lo que hace valiosa una película, el basado en conocimiento no personaliza más allá de las restricciones. Los híbridos combinan señales para cubrir esos huecos.
+
+\section{Diseños paralelos: ponderado y conmutación}
+
+El híbrido ponderado combina puntuaciones normalizadas a $[0,1]$ con una suma lineal:
+
+\begin{equation}
+    s_{\mathrm{final}}(i) = \beta_{\mathrm{CF}} \cdot \tilde{s}_{\mathrm{CF}}(i)
+                          + \beta_{\mathrm{cont}} \cdot \tilde{s}_{\mathrm{cont}}(i)
+\end{equation}
+
+Sin esa normalización el CF (escala 0.5--5.0) dominaría sobre la similitud coseno (escala 0--1). En la implementación se usa $\beta_{\mathrm{CF}} = 0.6$ y $\beta_{\mathrm{cont}} = 0.4$.
+
+La conmutación elige qué recomendador activar según el historial disponible: por debajo de un umbral de calificaciones, basado en conocimiento; con historial suficiente, KNN colaborativo. La transición es binaria, por tanto no hay degradación gradual entre los dos modos.
+
+\section{Diseño en cadena: cascada}
+
+La cascada encadena dos recomendadores: TF-IDF genera un conjunto amplio de candidatos (filtrado grueso) y KNN los reordena. La eficiencia de TF-IDF descarta la mayor parte del catálogo; la señal colaborativa de KNN refina el ranking final.
+
+\section{Meta-nivel}
+
+El recomendador de meta-nivel entrena un modelo colaborativo sobre los vectores de perfil generados por el sistema basado en contenido. En lugar de combinar puntuaciones de salida, combina las representaciones internas, lo que permite capturar interacciones entre los dos tipos de señal que la ponderación lineal no puede expresar.

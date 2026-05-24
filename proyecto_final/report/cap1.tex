@@ -1,0 +1,51 @@
+Se proponen cinco enfoques para recomendar películas usando MovieLens Small, que contiene aproximadamente 100\,000 calificaciones de 610 usuarios sobre 9\,742 películas. Se ha implementado filtrado colaborativo basado en vecinos (KNN), recomendación por contenido con TF-IDF, filtrado por restricciones explícitas, sistemas híbridos y dos redes neuronales: NCF y un Autocodificador colaborativo.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lp{8cm}}
+\toprule
+Enfoque & Idea central \\
+\midrule
+Filtrado Colaborativo (KNN)           & Usuarios con gustos similares comparten preferencias futuras \\
+Basado en Contenido (TF-IDF)          & Ítems parecidos a los que ya gustaron son buenos candidatos \\
+Basado en Conocimiento                & Filtrado por restricciones explícitas del usuario \\
+Sistemas Híbridos                     & Combinar enfoques para mitigar sus debilidades individuales \\
+Deep Learning (NCF + Autocodificador) & Embeddings que capturan relaciones no lineales \\
+\bottomrule
+\end{tabular}
+\caption{Resumen de enfoques implementados.}
+\end{table}
+
+\section{Carga y limpieza de datos}
+
+Se usan tres de los cuatro archivos de MovieLens: \texttt{ratings.csv} (calificaciones en escala 0.5--5.0), \texttt{movies.csv} (títulos y géneros) y \texttt{tags.csv} (etiquetas de texto libre). \texttt{links.csv} mapea a IMDb y TMDb y no se necesita aquí.
+
+Los dos problemas que se limpian: duplicados de par (usuario, película) que sesgan la matriz de interacciones, y nulos en géneros que rompen la vectorización TF-IDF.
+
+\subsection{Títulos y géneros}
+
+Los títulos incluyen el año entre paréntesis, por ejemplo ``Toy Story (1995)''. Se extrae con la expresión regular \texttt{r'\textbackslash s*\textbackslash((\textbackslash d\{4\})\textbackslash)\$'}. Los géneros están concatenados con \texttt{|}; para TF-IDF basta sustituirlo por espacio.
+
+Las etiquetas de \texttt{tags.csv} mezclan semántica valiosa (\emph{``cyberpunk''}, \emph{``based on novel''}) con ruido puro (\emph{``watched''}, \emph{``good''}). Se incluyen sin filtrar, por lo que algunos términos genéricos acaban con IDF más alto de lo que deberían.
+
+\subsection{Análisis exploratorio}
+
+Tras la limpieza el dataset queda con 100\,836 ratings de 610 usuarios sobre 9\,724 películas. No hay duplicados ni nulos, lo que simplifica el preprocesamiento. El rating promedio es 3.50 sobre 5.0, lo que revela un sesgo positivo claro: los usuarios califican más lo que han disfrutado y raramente se molestan en puntuar películas que no terminaron o que les parecieron indiferentes.
+
+Dos patrones dominan los datos. El sesgo de popularidad: unas pocas películas concentran la mayoría de las calificaciones mientras el resto tiene poquísimas. Los modelos aprenderán bien sobre esas películas y mal sobre las demás, y este desequilibrio es difícil de corregir sin técnicas de regularización específicas.
+
+El segundo es la dispersión de la matriz usuario-ítem: de 5\,942\,620 celdas posibles solo aproximadamente 100\,836 tienen valor, una dispersión del 98.3\,\%. Este número es aparentemente enorme pero es representativo de cualquier plataforma real: nadie ha visto el 2\,\% del catálogo de Netflix. El problema es que con tan pocos datos por usuario los métodos basados en similitud tienden a encontrar vecinos poco representativos.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/exploratorio}
+\caption{Distribución de ratings, actividad por usuario y popularidad por película.}
+\label{fig:exploratorio}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/exploratorio}
+\caption{Distribución de ratings, actividad por usuario y popularidad por película.}
+\label{fig:exploratorio}
+\end{figure}

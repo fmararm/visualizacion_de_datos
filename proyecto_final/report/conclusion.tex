@@ -1,0 +1,92 @@
+\section{Evaluación y comparación de resultados}
+
+Dos métricas de error sobre el conjunto de prueba. RMSE penaliza de forma desproporcionada los errores grandes:
+
+\begin{equation}
+    \mathrm{RMSE} = \sqrt{\frac{1}{|T|}\sum_{(u,i)\in T} (r_{ui} - \hat{r}_{ui})^2}
+\end{equation}
+
+MAE trata todos los errores igual:
+
+\begin{equation}
+    \mathrm{MAE} = \frac{1}{|T|}\sum_{(u,i)\in T} |r_{ui} - \hat{r}_{ui}|
+\end{equation}
+
+La tabla completa de resultados es:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Modelo & RMSE & MAE & Tiempo (s) \\
+\midrule
+KNN User-Based  & 0.9077 & 0.6933 & 0.99 \\
+KNN Item-Based  & 0.9129 & 0.6953 & 21.38 \\
+NCF             & 0.9324 & 0.7031 & 12.93 \\
+Autocodificador & 0.9553 & 0.7282 & 12.88 \\
+\bottomrule
+\end{tabular}
+\caption{Comparativa de modelos sobre el conjunto de prueba.}
+\label{tab:resultados}
+\end{table}
+
+Para una escala 0.5--5.0, todos los modelos se sitúan por debajo de MAE 0.75, lo que es un resultado razonable. La sorpresa es el orden: KNN-User es el modelo más preciso y el más rápido de entrenar (0.99\,s), mientras que los modelos de deep learning (más complejos, más lentos y más difíciles de ajustar) quedan en último lugar. Esto no invalida su utilidad en otros contextos, pero sí deja claro que la complejidad no es gratuita y que con pocos datos los modelos simples ganan.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/comparacion_metricas}
+\caption{RMSE y MAE por modelo sobre el conjunto de prueba.}
+\label{fig:metricas}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{images/precision_vs_velocidad}
+\caption{Compromiso entre precisión (RMSE) y tiempo de cómputo por modelo.}
+\label{fig:velocidad}
+\end{figure}
+
+\section{Comparativa de usuarios de ejemplo}
+
+Para ilustrar el comportamiento de los distintos sistemas se seleccionan tres usuarios representativos de distintos niveles de actividad. La metodología consiste en dividir a los usuarios según su número de valoraciones en percentiles y elegir aleatoriamente (semilla fija 42) un usuario de cada segmento: Ana del percentil 25 (historial escaso), Bernardo del percentil 50 (actividad cercana a la mediana) y Carlos del percentil 75 (historial extenso).
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcccp{4cm}}
+\toprule
+Usuario & userId & Valoraciones & Rating medio & Perfil \\
+\midrule
+Ana      & 130 & 28  & 3.54 & Drama y Aventura, cine de los 90, valoraciones medias \\
+Bernardo & 29  & 81  & 4.14 & Drama y Acción, cine de los 80, valoraciones generosas \\
+Carlos   & 279 & 176 & 3.65 & Acción y Thriller, cine de los 2000, valoraciones medias \\
+\bottomrule
+\end{tabular}
+\caption{Usuarios seleccionados por percentil de actividad.}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/analisis_ana}
+\caption{Análisis visual de recomendaciones para Ana (percentil 25).}
+\label{fig:ana}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/analisis_bernardo}
+\caption{Análisis visual de recomendaciones para Bernardo (percentil 50).}
+\label{fig:bernardo}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/analisis_carlos}
+\caption{Análisis visual de recomendaciones para Carlos (percentil 75).}
+\label{fig:carlos}
+\end{figure}
+
+\section{Conclusiones}
+
+Se han implementado y comparado siete sistemas de recomendación sobre MovieLens Small. La conclusión más honesta es que KNN-User gana en este contexto sin necesitar ninguna arquitectura sofisticada. El deep learning decepciona: más tiempo de implementación, más hiperparámetros que ajustar, y peores métricas. El salto de calidad que justifica esa complejidad no llega hasta que el dataset tiene varios órdenes de magnitud más de datos.
+
+Lo más valioso del ejercicio no son los números sino la comparativa cualitativa: los híbridos no mejoran siempre las métricas de error pero sí cambian el tipo de recomendaciones: la cascada, por ejemplo, introduce películas que el CF solo nunca habría propuesto. El sistema basado en conocimiento tiene el peor RMSE teórico pero es el único capaz de dar una respuesta sensata a un usuario nuevo. Cada enfoque cubre un hueco que los demás no pueden llenar, y eso es lo que justifica estudiarlos juntos.

@@ -1,0 +1,12 @@
+\babel@toc {spanish}{}\relax 
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {1.1}{\ignorespaces Distribución de ratings, actividad por usuario y popularidad por película.\relax }}{2}{figure.caption.5}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1}{\ignorespaces RMSE y MAE por modelo sobre el conjunto de prueba.\relax }}{12}{figure.caption.7}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces Compromiso entre precisión (RMSE) y tiempo de cómputo por modelo.\relax }}{12}{figure.caption.8}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces Análisis visual de recomendaciones para Ana (percentil 25).\relax }}{13}{figure.caption.10}%
+\contentsline {figure}{\numberline {5.4}{\ignorespaces Análisis visual de recomendaciones para Bernardo (percentil 50).\relax }}{14}{figure.caption.11}%
+\contentsline {figure}{\numberline {5.5}{\ignorespaces Análisis visual de recomendaciones para Carlos (percentil 75).\relax }}{15}{figure.caption.12}%

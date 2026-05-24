@@ -1,0 +1,71 @@
+El filtrado colaborativo parte de un supuesto simple: usuarios con calificaciones similares tienen gustos similares. No hace falta saber nada sobre las películas; basta la matriz usuario-ítem.
+
+\section{KNN basado en usuarios y en ítems}
+
+Para predecir la calificación $\hat{r}_{ui}$ que el usuario $u$ daría al ítem $i$, se buscan los $k$ vecinos más parecidos y se ponderan sus desviaciones respecto a su propia media:
+
+\begin{equation}
+    \hat{r}_{ui} = \bar{r}_u +
+    \frac{\displaystyle\sum_{v \in N_k(u)} \mathrm{sim}(u,v)\,(r_{vi} - \bar{r}_v)}
+         {\displaystyle\sum_{v \in N_k(u)} |\mathrm{sim}(u,v)|}
+\end{equation}
+
+Lo relevante de cada vecino no es cuántas estrellas le dio a la película sino cuánto se desvió de \emph{su propio} promedio: si alguien que siempre pone 5 estrellas le dio 4, es señal negativa; si alguien que suele poner 2 le dio 4, es señal fuerte. El peso de cada vecino es su similitud con $u$.
+
+En KNN basado en ítems la lógica se invierte: se buscan ítems similares al ítem $i$ entre los que el usuario $u$ ya ha valorado. La similitud entre ítems se precomputa, así que en inferencia solo hace falta una suma ponderada sobre el historial del usuario, por lo que escala mejor que la variante basada en usuarios.
+
+\subsection{Similitud coseno}
+
+KNNWithMeans de Surprise aplica la corrección de media automáticamente, lo que neutraliza el sesgo de escala individual. La similitud coseno mide el ángulo entre dos vectores de calificaciones, ignorando diferencias de magnitud:
+
+\begin{equation}
+    \mathrm{sim}(u,v) = \frac{\mathbf{r}_u \cdot \mathbf{r}_v}{\|\mathbf{r}_u\|\,\|\mathbf{r}_v\|}
+\end{equation}
+
+Se usa $k = 40$ vecinos. Los resultados sobre el conjunto de prueba son:
+
+\begin{itemize}
+    \item \textbf{KNN-User}: RMSE 0.9077, MAE 0.6933, tiempo 0.99\,s
+    \item \textbf{KNN-Item}: RMSE 0.9129, MAE 0.6953, tiempo 21.38\,s
+\end{itemize}
+
+La diferencia de precisión entre ambas variantes es mínima, menos de 0.006 en RMSE, pero la diferencia de tiempo es llamativa: KNN-User tarda menos de un segundo mientras que KNN-Item necesita 21 segundos para precomputar la matriz de similitud entre ítems. Dicho esto, esos 21 segundos se pagan una sola vez en entrenamiento; en inferencia KNN-Item es mucho más rápido porque no recalcula similitudes por usuario. Para un sistema en producción con miles de consultas diarias, KNN-Item sigue siendo la opción sensata.
+
+El arranque en frío es el límite estructural del CF: sin historial no hay vecinos para el usuario, y sin calificaciones una película no aparece en la matriz.
+
+\section{Recomendador basado en contenido (TF-IDF + coseno)}
+
+En lugar de mirar qué hace la comunidad, se construye un perfil de cada película a partir de sus atributos (géneros, etiquetas) y se recomiendan películas similares a las que el usuario ha valorado positivamente. No se necesitan datos de ningún otro usuario.
+
+\subsection{TF-IDF para representar películas}
+
+TF-IDF convierte texto en un vector numérico donde cada dimensión captura cuánto aparece un término en esta película (TF) y qué tan raro es en todo el catálogo (IDF):
+
+\begin{equation}
+    \mathrm{TF\text{-}IDF}(t, d) = \mathrm{tf}(t,d) \cdot \left(\log\frac{1+N}{1+n_t} + 1\right)
+\end{equation}
+
+donde $t$ es el término, $d$ es el documento (película), $N$ es el total de películas y $n_t$ es cuántas contienen el término $t$.
+
+Términos como \emph{``film''} o \emph{``movie''} quedan prácticamente anulados ($\mathrm{IDF} \approx 0$). Términos como \emph{``cyberpunk''} o \emph{``french new wave''}, raros en el catálogo, reciben TF-IDF alto y actúan como señal discriminativa.
+
+\subsection{Perfil de usuario por contenido}
+
+El perfil de usuario es la media ponderada de los vectores TF-IDF de las películas valoradas, usando la calificación como peso:
+
+\begin{equation}
+    \mathbf{p}_u = \frac{\displaystyle\sum_{i \in I_u} r_{ui} \cdot \mathbf{v}_i}
+                        {\displaystyle\sum_{i \in I_u} r_{ui}}
+\end{equation}
+
+Las películas con calificación alta tienen más peso, así que el perfil refleja las preferencias más intensas del usuario. El problema es que es estático: si el usuario ha cambiado de gustos, el vector mezcla etapas distintas sin representar bien ninguna.
+
+La matriz TF-IDF resulta de forma $9742 \times 5000$ términos y el cálculo de la similitud coseno entre todos los pares tarda 1.69 segundos, produciendo una matriz cuadrada con aproximadamente 94 millones de valores flotantes. En este dataset el tiempo es asumible, pero la complejidad es $O(n^2)$ en memoria y cómputo: con 100\,000 películas la matriz ocuparía 40\,GB. Es el talón de Aquiles del enfoque.
+
+\section{Recomendador basado en conocimiento}
+
+Opera sobre restricciones explícitas (género deseado, rango de años, popularidad mínima) sin necesitar historial de ningún usuario. Es la única opción viable para arranque en frío total.
+
+Se filtra el catálogo según las restricciones declaradas, se excluye lo visto, y se ordenan los candidatos por rating medio o número de valoraciones. La explicabilidad es directa: ``tiene $\geq$4.2 estrellas de media, es Drama de los 90s y no la has visto aún''.
+
+La restricción es simétrica: solo captura lo que el usuario sabe articular. Preferencias implícitas o matices que no se expresan como restricciones quedan fuera.

@@ -1,0 +1,5 @@
+Five recommendation approaches are proposed and evaluated on the MovieLens Small dataset, which contains approximately 100\,000 ratings from 610 users on 9\,742 movies.
+
+The implemented systems are: user- and item-based collaborative filtering (KNN) using the Surprise library, content-based filtering via TF-IDF vectors and cosine similarity, knowledge-based filtering using explicit genre and year constraints, four hybrid designs (weighted, switching, cascade, and meta-level), and two deep learning architectures (Neural Collaborative Filtering and a Collaborative Autoencoder).
+
+Results show that no single method dominates across all scenarios. Item-based KNN achieves competitive RMSE with predictable inference latency. Content-based filtering is the only approach that works without any other user's history. The deep learning models do not outperform KNN on this small dataset, but offer scalability advantages when data volume justifies training cost.
