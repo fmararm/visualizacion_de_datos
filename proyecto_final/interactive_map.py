@@ -98,14 +98,6 @@ def interactive_secciones_map(context):
     serv_act    = act_2023[act_2023["Actividad económica"] == "Servicios"].groupby("_key")["num_casos"].sum()
     servicios_map = ((serv_act / total_act * 100).fillna(0)).to_dict()
 
-    # % mujeres en ocupaciones elementales, 2023
-    ocu_df = pd.read_csv("data/ocupacion-sc-3.csv", encoding="utf-8-sig")
-    ocu_df["_key"] = ocu_df["geocode"].apply(_strip_prefix)
-    elem         = ocu_df[(ocu_df["año"] == 2023) & (ocu_df["ocupacion"] == "Ocupaciones elementales")]
-    total_elem   = elem.groupby("_key")["num_casos"].sum()
-    mujeres_elem = elem[elem["sexo"] == "Mujeres"].groupby("_key")["num_casos"].sum()
-    genero_map   = ((mujeres_elem / total_elem * 100).fillna(0)).to_dict()
-
     # ------------------------------------------------------------------
     # 3. Construir mapa
     # ------------------------------------------------------------------
@@ -116,7 +108,6 @@ def interactive_secciones_map(context):
         ("Renta neta media por hogar (€)",       renta_map,     ["#d73027", "#fee08b", "#1a9850"], "Renta (€):",       ".0f"),
         ("% Ingresos por desempleo",              desemp_map,    ["#edf8e9", "#74c476", "#005a32"], "% Desempleo:",     ".1f"),
         ("% Trabajadores en Servicios",           servicios_map, ["#fff5eb", "#fd8d3c", "#7f2704"], "% Servicios:",     ".1f"),
-        ("% Mujeres en ocupaciones elementales",  genero_map,    ["#f7f4f9", "#9e9ac8", "#3f007d"], "% Mujeres elem.:", ".1f"),
     ]
 
     cmaps = []

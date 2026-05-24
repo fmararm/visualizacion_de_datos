@@ -63,13 +63,13 @@
 \vspace*{\stretch{0.5}}
 
 \begin{center}
-  {\Huge Trabajo Final de Asignatura}\\[5mm]
+  {\Huge Trabajo Final de Visualización}\\[5mm]
   {\large Máster Universitario en Inteligencia de Datos y Ciberseguridad}
 \end{center}
 
 \HRule
 \begin{flushright}
-        {\Huge Visualización\\[2mm]Análisis de la desigualdad económica\\en la provincia de Santa Cruz de Tenerife} \\[2.5mm]
+        {\Huge Análisis de la desigualdad económica\\en la provincia de Santa Cruz de Tenerife} \\[2.5mm]
         {\Large Francisco Marqués Armas} \\[5mm]
 \end{flushright}
 \HRule
@@ -97,11 +97,11 @@
 
 \section{Motivación}
 
-La provincia de Santa Cruz de Tenerife, que comprende las islas de Tenerife, La Palma, La Gomera y El Hierro, presenta una distribución de la renta notablemente desigual: municipios turísticos y de servicios conviven con zonas de actividad agrícola o poca actividad económica cuya renta per cápita es significativamente inferior. Este proyecto aplica las técnicas de visualización de datos aprendidas en la asignatura para explorar, comunicar y cuantificar esa desigualdad a través de datos oficiales del Instituto Nacional de Estadística (INE).
+La provincia de Santa Cruz de Tenerife presenta una distribución de la renta desigual, ya que municipios turísticos y de servicios conviven con zonas de actividad agrícola o poca actividad económica cuya renta per cápita es significativamente inferior. Este proyecto aplica las técnicas de visualización de datos aprendidas en la asignatura para cuantificar esa desigualdad a través de datos oficiales del Instituto Nacional de Estadística (INE).
 
 \section{Fuentes de datos}
 
-El proyecto emplea cuatro conjuntos de datos, todos de acceso público mediante la API JSON-STAT del INE:
+El proyecto emplea cuatro conjuntos de datos:
 
 \begin{table}[H]
 \centering
@@ -140,7 +140,7 @@ Las visualizaciones se organizan en torno a tres preguntas:
 \chapter{Gramática de gráficos}
 % =============================================================================
 
-Este capítulo analiza cada visualización generada siguiendo la gramática de gráficos de Wilkinson \cite{wilkinson2005} tal como la implementa Plotnine \cite{plotnine}: datos, mapeos estéticos (aes), geometrías (geom\_*), escalas, coordenadas, facetas y tema.
+A continuación se analiza cada visualización generada siguiendo la gramática de gráficos de Wilkinson \cite{wilkinson2005} tal como la implementa Plotnine \cite{plotnine}: datos, mapeos estéticos (aes), geometrías (geom\_*), escalas, coordenadas, facetas y tema.
 
 \section{Lollipop: ranking de municipios por renta media}
 
@@ -169,7 +169,7 @@ Este capítulo analiza cada visualización generada siguiendo la gramática de g
   \item Tema: theme\_minimal() con texto del eje Y reducido (size=7) para acomodar 54 etiquetas.
 \end{itemize}
 
-El lollipop es preferible al gráfico de barras cuando hay muchas categorías: la línea delgada reduce la tinta y la comparación de valores se realiza rápidamente gracias al punto claramente posicionado.
+El lollipop es preferible al gráfico de barras cuando hay muchas categorías: la línea delgada reduce el ruido visual y la comparación de valores se realiza rápidamente gracias al punto claramente posicionado.
 
 \section{Histograma: distribución de la renta por sección censal}
 
@@ -244,25 +244,6 @@ Mismo esquema que el anterior pero para los cuatro sectores CNAE: Servicios, Ind
 
 El diverging bar es el tipo de gráfico más adecuado para mostrar desviaciones respecto a un punto de referencia (aquí, la paridad perfecta al 50\%). Permite ver de un vistazo qué categorías están feminizadas o masculinizadas.
 
-\section{Slope chart: evolución de la renta 2021--2023}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{images/slope}
-\caption{Slope chart de evolución de la renta media por municipio entre 2021 y 2023.}
-\end{figure}
-
-\begin{itemize}
-  \item Datos: tabla con un registro por municipio; columnas municipio, renta\_2021 y renta\_2023.
-  \item Mapeos: x = año (dos valores: 2021 y 2023), y = renta\_media, group = municipio, color = isla.
-  \item Geometrías: geom\_line (la pendiente entre los dos años) + geom\_point en los extremos.
-  \item Escalas: eje Y continuo en euros; eje X discreto con dos posiciones.
-  \item Coordenadas: cartesianas.
-  \item Facetas: ninguna; todos los municipios superpuestos.
-  \item Tema: theme\_minimal().
-\end{itemize}
-
-El slope chart es ideal para comparar el cambio relativo entre dos momentos: la inclinación de cada línea indica si un municipio ha ganado o perdido posición relativa. La densidad de líneas cruzadas señala cambios de orden en el ranking.
 
 \section{Box plots: desigualdad intramunicipal por isla}
 
@@ -373,25 +354,35 @@ Mismo esquema que el anterior, pero la variable de agrupación es la categoría 
 
 \subsection{Técnica y datos}
 
-El mapa es un mapa coroplético (choropleth): cada polígono del territorio se colorea proporcionalmente al valor de una variable cuantitativa. En este caso los polígonos son las secciones censales de la provincia de Santa Cruz de Tenerife y la variable es la renta neta media por hogar (OBS\_VALUE).
+El mapa es un mapa coroplético (choropleth) multicapa: cada polígono del territorio se colorea proporcionalmente al valor de una variable cuantitativa, y el usuario puede cambiar de capa mediante un control de capas. Los polígonos son las secciones censales de la provincia de Santa Cruz de Tenerife. Las tres capas disponibles son:
 
-Los datos geométricos provienen de los ficheros GeoJSON del Instituto Geográfico Nacional (IGN), que delimitan las secciones censales a nivel de provincia. Estos polígonos se unen al dataframe de renta mediante el código de sección censal de siete dígitos, que identifica de forma única cada sección en España.
+\begin{itemize}
+  \item Renta neta media por hogar (euros), procedente del Atlas ADRH del INE (2023).
+  \item Porcentaje de ingresos procedentes de prestaciones por desempleo, calculado a partir del fichero de distribución de renta (2023).
+  \item Porcentaje de trabajadores en el sector Servicios sobre el total de asalariados, calculado a partir del fichero de actividad económica por sección censal (2023).
+\end{itemize}
 
-La librería Folium genera el mapa como un documento HTML autónomo que envuelve una instancia de Leaflet.js. Leaflet renderiza los polígonos en un canvas SVG sobre un tile base (OpenStreetMap por defecto) y gestiona las interacciones: zoom, paneo y hover sobre los polígonos.
+Los datos geométricos provienen de los ficheros GeoJSON del Instituto Geográfico Nacional (IGN), que delimitan las secciones censales a nivel de provincia. Estos polígonos se unen a cada dataframe mediante el código de sección censal de siete dígitos. La librería Folium genera el mapa como un documento HTML autónomo que envuelve una instancia de Leaflet.js, que gestiona las interacciones (zoom, paneo y tooltip al hover).
 
 \subsection{Codificación visual}
 
-La variable de renta se mapea a color mediante una escala continua lineal (branca.LinearColormap) con la paleta YlOrRd (amarillo a rojo), donde el amarillo más claro corresponde a las secciones de menor renta y el rojo más oscuro a las de mayor renta. La escala se ajusta a los percentiles 5 y 95 de la distribución para reducir el efecto de valores atípicos en los extremos y maximizar el contraste en la zona central de la distribución.
+Cada capa utiliza una paleta de color distinta para reforzar su significado temático:
 
-Cada polígono incluye un tooltip que muestra el nombre del municipio, el código de sección censal y el valor de renta al pasar el ratón por encima, lo que permite identificar zonas de interés sin necesidad de una leyenda exhaustiva.
+\begin{itemize}
+  \item Renta neta media: paleta divergente rojo-amarillo-verde (RdYlGn); el verde intenso indica renta alta y el rojo indica renta baja.
+  \item Porcentaje de ingresos por desempleo: paleta secuencial verde claro a verde oscuro; el verde oscuro indica mayor dependencia de prestaciones.
+  \item Porcentaje en Servicios: paleta secuencial naranja claro a naranja oscuro; la saturación indica mayor concentración en el sector.
+\end{itemize}
+
+En todas las capas, cada polígono incluye un tooltip que muestra el nombre del municipio y el valor de la variable al pasar el ratón, lo que permite identificar zonas de interés sin necesidad de una leyenda exhaustiva.
 
 \subsection{Diseño geoespacial vs. gramática de gráficos}
 
 A diferencia de los gráficos de Plotnine, este mapa no se puede describir completamente con la gramática de Wilkinson porque la variable geométrica (posición y forma de cada polígono) ya viene codificada en los datos GeoJSON y no es un mapeo libre. El único mapeo estético en sentido estricto es el del color. Sin embargo, los principios de diseño se aplican igualmente:
 
 \begin{itemize}
-  \item Figura-Fondo: los polígonos coloreados destacan sobre el tile base neutro.
-  \item Punto Focal: los clusters de color rojo intenso (zonas de alta renta) atraen la atención de inmediato y permiten identificar las áreas más ricas de la provincia.
+  \item Figura-Fondo: los polígonos coloreados destacan sobre el tile base neutro (CartoDB Positron).
+  \item Punto Focal: los clusters de color intenso atraen la atención y permiten identificar de inmediato las zonas extremas de cada variable.
   \item Proximidad: las secciones censales del mismo municipio son polígonos adyacentes, por lo que la homogeneidad de color dentro de un municipio se percibe sin etiquetas.
 \end{itemize}
 
@@ -421,8 +412,6 @@ Waterfall actividades & Continuidad, Parte-Todo & Mismo principio; la dominancia
 \addlinespace
 Diverging bar género & Destino Común, Simetría & Las barras que se extienden hacia lados opuestos convergen en el eje de paridad; la simetría rota evidencia el desequilibrio. \\
 \addlinespace
-Slope chart & Cambio Temporal, Destino Común & Las líneas paralelas comunican continuidad temporal; las que se cruzan señalan cambios de orden. \\
-\addlinespace
 Box plots (islas) & Distribución, Punto Focal & La caja muestra la distribución completa; la mediana como línea central actúa de punto focal para la comparación entre municipios. \\
 \addlinespace
 Scatter & Correlación, Destino Común & Los puntos que forman una nube orientada negativamente señalan un destino común: a más educación elemental, menor renta. \\
@@ -438,39 +427,6 @@ Mapa interactivo & Figura-Fondo, Punto Focal & El gradiente de color sobre fondo
 \end{tabular}
 \caption{Principios de diseño y gestalt por visualización.}
 \end{table}
-
-\section{Recomendaciones de diseño aplicadas}
-
-A continuación se describen las recomendaciones de diseño más relevantes que se siguieron en el proyecto:
-
-\begin{enumerate}
-
-  \item Relación datos/tinta (data-ink ratio).
-  Todos los gráficos emplean theme\_minimal() de Plotnine, que elimina el fondo gris, los bordes del panel y las rejillas secundarias. En los lollipops se usa una línea fina en lugar de barras rellenas para maximizar este ratio.
-
-  \item Ordenación por valor, no alfabética.
-  En el ranking de municipios, el heatmap y los box plots, las categorías del eje Y se ordenan por la magnitud de la variable cuantitativa (renta mediana o media). Esto facilita la lectura comparativa y evita la búsqueda aleatoria.
-
-  \item Uso de coord\_flip() para etiquetas largas.
-  Los gráficos con etiquetas de municipio u ocupación se orientan horizontalmente mediante coord\_flip() para evitar la rotación de texto y reducir la carga cognitiva del lector.
-
-  \item Paletas semánticas.
-  \begin{itemize}
-    \item El diverging bar de género usa azul (mayoría masculina) y rojo (mayoría femenina), colores con convención social reconocible.
-    \item El grouped bar de ocupación usa verde (ocupaciones de alta renta) y rojo (ocupaciones elementales) siguiendo la convención semafórica.
-    \item El heatmap usa la paleta RdYlGn: rojo para valores bajos (situación desfavorable) y verde para altos.
-  \end{itemize}
-
-  \item Anotaciones y líneas de referencia.
-  El diverging bar incluye una línea en y=0 (paridad exacta). El scatter incluye la recta de regresión. El histograma incluye una línea vertical en la mediana. Estas anotaciones anclan la interpretación sin necesidad de texto adicional.
-
-  \item Carga cognitiva limitada en variables categóricas.
-  Ningún gráfico supera 10 categorías de color simultáneas (principio de límite de la memoria de trabajo). El check de activos test\_ocupacion\_categorias verifica programáticamente este límite.
-
-  \item Generación de archivos separados por subgrupo.
-  Los box plots se generan como cuatro archivos PNG independientes (uno por isla) en lugar de un único panel con facet\_wrap. Esto permite ajustar la escala vertical a cada isla y mantener la legibilidad de las etiquetas de municipio.
-
-\end{enumerate}
 
 
 % =============================================================================
@@ -499,8 +455,6 @@ rentamedia_load
             -> ranking_municipios   # PNG
         -> data_hist_renta
             -> hist_renta           # PNG
-        -> data_slope_brecha
-            -> slope_brecha         # PNG
         -> data_boxplot_intramunicipal
             -> boxplot_intramunicipal  # 4 x PNG
         -> data_heatmap_renta
@@ -552,15 +506,6 @@ def ranking_municipios(context, prompt_ranking, data_renta_municipio):
                   output_path, width=12, height=14)
     return output_path
 \end{lstlisting}
-
-\section{Beneficios de la arquitectura}
-
-\begin{itemize}
-  \item Reproducibilidad: dado el mismo conjunto de datos y el mismo prompt, el pipeline siempre produce el mismo PNG.
-  \item Trazabilidad: Dagster registra metadatos de cada ejecución: tamaño del archivo generado, número de registros del dataframe de entrada, ruta del archivo, etc.
-  \item Modularidad: cada step es independiente. Cambiar la transformación de datos de data\_renta\_municipio sólo implica re-ejecutar ese asset y los que dependen de él; los demás no se recalculan.
-  \item Observabilidad: la interfaz web de Dagster muestra el grafo de dependencias, el historial de ejecuciones y los metadatos de cada asset en tiempo real.
-\end{itemize}
 
 
 % =============================================================================
@@ -623,7 +568,6 @@ test\_hist\_dispersion & Coeficiente de variación de la renta > 0.15 (el histog
 test\_waterfall\_suma\_100 & Las 5 fuentes de ingresos suman aprox. 100\% \\
 test\_piramide\_categorias & El dataset tiene columna desviacion y >= 2 categorías \\
 test\_waterfall\_actividades\_suma\_100 & Los 4 sectores CNAE suman aprox. 100\% \\
-test\_slope\_dos\_anios & El slope chart tiene columnas renta\_2021 y renta\_2023 y >= 40 municipios \\
 test\_boxplot\_cobertura & El boxplot tiene >= 40 municipios y >= 200 secciones censales \\
 test\_scatter\_correlacion\_negativa & Correlación entre \% elementales y renta < -0.1 \\
 test\_quintiles\_completos & 5 quintiles y >= 3 sectores de actividad \\
@@ -653,23 +597,11 @@ def _check_file(path, description, gestalt, min_size=5000):
     )
 \end{lstlisting}
 
-\section{Metadatos de los checks}
-
-Todos los checks incluyen metadatos estructurados que Dagster almacena en su base de datos de eventos:
-\begin{itemize}
-  \item description: descripción legible del criterio de aceptación.
-  \item gestalt: principio de diseño relacionado (por ejemplo, "Figura-Fondo", "Continuidad", "Parte-Todo").
-  \item Métricas numéricas específicas (n\_municipios, correlacion, ratio\_max\_min, etc.) que permiten monitorizar la evolución del dataset a lo largo del tiempo.
-\end{itemize}
-
-
 % =============================================================================
 \chapter{Dashboard interactivo}
 % =============================================================================
 
-\section{Motivación}
-
-Los gráficos estáticos en PNG son adecuados para un informe impreso o un documento PDF, pero no permiten la exploración libre de los datos ni la combinación narrativa de todas las visualizaciones en un único flujo de lectura. El dashboard de Streamlit (dashboard.py) cubre esa necesidad: agrupa los catorce gráficos del proyecto junto con el mapa interactivo, añade texto explicativo contextual y organiza el contenido en una secuencia que sigue el arco narrativo del análisis.
+El dashboard de Streamlit (dashboard.py) agrupa los catorce gráficos del proyecto junto con el mapa interactivo.
 
 \section{Estructura y narrativa}
 
@@ -688,7 +620,7 @@ Distribución de la renta & Lollipop ranking, histograma & ?`Cuánta diferencia 
 \addlinespace
 Composición económica & Waterfall fuentes, waterfall actividades & ?`De qué viven los habitantes? \\
 \addlinespace
-Desigualdad y género & Slope chart, diverging bar & ?`Ha cambiado la brecha? ?`Se reparte igual el trabajo precario? \\
+Desigualdad y género & Diverging bar & ?`Se reparte igual el trabajo precario? \\
 \addlinespace
 Desigualdad intramunicipal & 4 box plots (uno por isla) & ?`Cuánta heterogeneidad hay dentro de cada municipio? \\
 \addlinespace
@@ -742,7 +674,7 @@ Este apéndice recoge los prompts utilizados para que el modelo de lenguaje gene
 Cada prompt incluye los siguientes elementos:
 
 \begin{itemize}
-  \item Tipo de gráfico y justificación: se indica el tipo de geometría (geom\_*) y por qué es adecuado para los datos (por ejemplo, "un lollipop reduce la tinta sin perder precisión respecto a un gráfico de barras").
+  \item Tipo de gráfico y justificación: se indica el tipo de geometría (geom\_*) y por qué es adecuado para los datos (por ejemplo, "un lollipop evita la saturación visual de un gráfico de barras sin perder precisión").
   \item Mapeos estéticos explícitos: se especifica qué variable va en qué aes(), siguiendo la terminología de la gramática de gráficos.
   \item Transformaciones de coordenadas: cuando se requiere coord\_flip(), se indica explícitamente junto con el patrón correcto (x=categórica, y=numérica).
   \item Principios de gestalt: se mencionan los principios que debe activar el gráfico (por ejemplo, "punto focal en la cabeza del lollipop", "continuidad en la línea acumulada del waterfall").
@@ -775,7 +707,7 @@ y geom_point para la cabeza. Aplica coord_flip() para que los nombres
 de municipio se lean horizontalmente. Usa theme_minimal() y etiquetas
 del eje Y en formato de miles de euros.
 
-Principios de gestalt: Figura-Fondo (línea delgada reduce tinta),
+Principios de gestalt: Figura-Fondo (línea delgada minimiza el ruido visual),
 Punto Focal (geom_point guía la lectura del valor).
 \end{lstlisting}
 

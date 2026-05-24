@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.4.29)  24 MAY 2026 14:20
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.4.29)  24 MAY 2026 22:02
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -482,14 +482,14 @@ Non-PDF special ignored!
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] (output/memtfg.toc
 LaTeX Font Info:    External font `cmex7' loaded for size
 (Font)              <6> on input line 3.
-
-[2
-
-])
+)
 \tf@toc=\write4
 \openout4 = `memtfg.toc'.
 
- [3]
+
+[2
+
+]
 Cap\'{\i }tulo 1.
 
 Overfull \hbox (74.58734pt too wide) in paragraph at lines 108--118
@@ -500,7 +500,7 @@ Overfull \hbox (74.58734pt too wide) in paragraph at lines 108--118
 
 ] [2]
 Cap\'{\i }tulo 2.
-<images/ranking.png, id=245, 722.7pt x 433.62pt>
+<images/ranking.png, id=216, 722.7pt x 433.62pt>
 File: images/ranking.png Graphic file (type png)
 <use images/ranking.png>
 Package pdftex.def Info: images/ranking.png  used on input line 149.
@@ -508,153 +508,140 @@ Package pdftex.def Info: images/ranking.png  used on input line 149.
 [3
 
  <./images/ranking.png>]
-<images/histograma.png, id=256, 722.7pt x 433.62pt>
+<images/histograma.png, id=227, 722.7pt x 433.62pt>
 File: images/histograma.png Graphic file (type png)
 <use images/histograma.png>
 Package pdftex.def Info: images/histograma.png  used on input line 178.
 (pdftex.def)             Requested size: 483.69687pt x 290.21953pt.
-<images/waterfall_fuentes.png, id=257, 722.7pt x 433.62pt>
+<images/waterfall_fuentes.png, id=228, 722.7pt x 433.62pt>
 File: images/waterfall_fuentes.png Graphic file (type png)
 <use images/waterfall_fuentes.png>
 Package pdftex.def Info: images/waterfall_fuentes.png  used on input line 198.
 (pdftex.def)             Requested size: 483.69687pt x 290.21953pt.
  [4 <./images/histograma.png>]
-<images/waterfall_actividades.png, id=265, 722.7pt x 433.62pt>
+<images/waterfall_actividades.png, id=235, 722.7pt x 433.62pt>
 File: images/waterfall_actividades.png Graphic file (type png)
 <use images/waterfall_actividades.png>
 Package pdftex.def Info: images/waterfall_actividades.png  used on input line 2
 16.
 (pdftex.def)             Requested size: 483.69687pt x 290.21953pt.
  [5 <./images/waterfall_fuentes.png>]
-<images/diverging_genero.png, id=272, 722.7pt x 433.62pt>
+<images/diverging_genero.png, id=243, 722.7pt x 433.62pt>
 File: images/diverging_genero.png Graphic file (type png)
 <use images/diverging_genero.png>
 Package pdftex.def Info: images/diverging_genero.png  used on input line 226.
 (pdftex.def)             Requested size: 483.69687pt x 290.21953pt.
- [6 <./images/waterfall_actividades.png>]
-<images/slope.png, id=279, 722.7pt x 433.62pt>
-File: images/slope.png Graphic file (type png)
-<use images/slope.png>
-Package pdftex.def Info: images/slope.png  used on input line 251.
-(pdftex.def)             Requested size: 483.69687pt x 290.21953pt.
- [7 <./images/diverging_genero.png>] [8 <./images/slope.png>]
-<images/boxplot_tenerife.png, id=292, 722.7pt x 784.1295pt>
+ [6 <./images/waterfall_actividades.png>] [7 <./images/diverging_genero.png>]
+<images/boxplot_tenerife.png, id=256, 722.7pt x 784.1295pt>
 File: images/boxplot_tenerife.png Graphic file (type png)
 <use images/boxplot_tenerife.png>
-Package pdftex.def Info: images/boxplot_tenerife.png  used on input line 283.
+Package pdftex.def Info: images/boxplot_tenerife.png  used on input line 264.
 (pdftex.def)             Requested size: 483.69687pt x 524.81366pt.
-<images/boxplot_palma.png, id=293, 722.7pt x 353.4003pt>
+ [8]
+<images/boxplot_palma.png, id=261, 722.7pt x 353.4003pt>
 File: images/boxplot_palma.png Graphic file (type png)
 <use images/boxplot_palma.png>
-Package pdftex.def Info: images/boxplot_palma.png  used on input line 290.
+Package pdftex.def Info: images/boxplot_palma.png  used on input line 271.
 (pdftex.def)             Requested size: 232.17242pt x 113.53258pt.
-<images/boxplot_gomera.png, id=294, 722.7pt x 289.08pt>
+<images/boxplot_gomera.png, id=262, 722.7pt x 289.08pt>
 File: images/boxplot_gomera.png Graphic file (type png)
 <use images/boxplot_gomera.png>
-Package pdftex.def Info: images/boxplot_gomera.png  used on input line 295.
+Package pdftex.def Info: images/boxplot_gomera.png  used on input line 276.
 (pdftex.def)             Requested size: 232.17242pt x 92.86919pt.
-<images/boxplot_hierro.png, id=295, 722.7pt x 289.08pt>
+<images/boxplot_hierro.png, id=263, 722.7pt x 289.08pt>
 File: images/boxplot_hierro.png Graphic file (type png)
 <use images/boxplot_hierro.png>
-Package pdftex.def Info: images/boxplot_hierro.png  used on input line 300.
+Package pdftex.def Info: images/boxplot_hierro.png  used on input line 281.
 (pdftex.def)             Requested size: 232.17242pt x 92.86919pt.
  [9 <./images/boxplot_tenerife.png>]
-<images/scatter.png, id=302, 722.7pt x 433.62pt>
+<images/scatter.png, id=270, 722.7pt x 433.62pt>
 File: images/scatter.png Graphic file (type png)
 <use images/scatter.png>
-Package pdftex.def Info: images/scatter.png  used on input line 310.
+Package pdftex.def Info: images/scatter.png  used on input line 291.
 (pdftex.def)             Requested size: 483.69687pt x 290.21953pt.
-
-[10 <./images/boxplot_palma.png> <./images/boxplot_gomera.png> <./images/boxplo
-t_hierro.png> <./images/scatter.png>]
-<images/grouped_actividad.png, id=315, 867.24pt x 433.62pt>
+ [10 <./images/boxplot_palma.png> <./images/boxplot_gomera.png> <./images/boxpl
+ot_hierro.png> <./images/scatter.png>]
+<images/grouped_actividad.png, id=282, 867.24pt x 433.62pt>
 File: images/grouped_actividad.png Graphic file (type png)
 <use images/grouped_actividad.png>
-Package pdftex.def Info: images/grouped_actividad.png  used on input line 330.
+Package pdftex.def Info: images/grouped_actividad.png  used on input line 311.
 (pdftex.def)             Requested size: 483.69687pt x 241.85292pt.
  [11 <./images/grouped_actividad.png>]
-<images/grouped_ocupacion.png, id=322, 867.24pt x 433.62pt>
+<images/grouped_ocupacion.png, id=290, 867.24pt x 433.62pt>
 File: images/grouped_ocupacion.png Graphic file (type png)
 <use images/grouped_ocupacion.png>
-Package pdftex.def Info: images/grouped_ocupacion.png  used on input line 348.
+Package pdftex.def Info: images/grouped_ocupacion.png  used on input line 329.
 (pdftex.def)             Requested size: 483.69687pt x 241.85292pt.
-<images/heatmap.png, id=323, 722.7pt x 722.7pt>
+<images/heatmap.png, id=291, 722.7pt x 722.7pt>
 File: images/heatmap.png Graphic file (type png)
 <use images/heatmap.png>
-Package pdftex.def Info: images/heatmap.png  used on input line 358.
+Package pdftex.def Info: images/heatmap.png  used on input line 339.
 (pdftex.def)             Requested size: 411.14528pt x 411.14929pt.
-
-[12 <./images/grouped_ocupacion.png>] [13 <./images/heatmap.png>]
-Overfull \hbox (26.97218pt too wide) in paragraph at lines 384--385
-[]\T1/cmr/m/n/12 La va-ria-ble de ren-ta se ma-pea a co-lor me-dian-te una es-c
-a-la con-ti-nua li-neal (bran-ca.LinearColormap)
- []
-
-[14]
+ [12 <./images/grouped_ocupacion.png>] [13 <./images/heatmap.png>] [14] [15]
 Cap\'{\i }tulo 3.
 
-Underfull \hbox (badness 10000) in paragraph at lines 414--414
+Underfull \hbox (badness 10000) in paragraph at lines 405--405
 []|\T1/cmr/m/n/10.95 Figura-Fondo, Pun-to
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 416--416
+Underfull \hbox (badness 10000) in paragraph at lines 407--407
 []|\T1/cmr/m/n/10.95 Proximidad, Figura-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 418--418
+Underfull \hbox (badness 10000) in paragraph at lines 409--409
 []|\T1/cmr/m/n/10.95 Continuidad, Parte-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 420--420
+Underfull \hbox (badness 10000) in paragraph at lines 411--411
 []|\T1/cmr/m/n/10.95 Continuidad, Parte-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 428--428
+Underfull \hbox (badness 10000) in paragraph at lines 417--417
 []|\T1/cmr/m/n/10.95 Correlación, Des-tino
  []
 
 
-Underfull \hbox (badness 1454) in paragraph at lines 434--434
+Underfull \hbox (badness 1454) in paragraph at lines 423--423
 []|\T1/cmr/m/n/10.95 Cambio Tem-po-ral, Si-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 436--436
+Underfull \hbox (badness 10000) in paragraph at lines 425--425
 []|\T1/cmr/m/n/10.95 Figura-Fondo, Pun-to
  []
 
-[15
+[16
 
-] [16] [17]
+]
 Cap\'{\i }tulo 4.
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
-nput line 495.
+nput line 451.
 LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 4
-95.
+51.
 (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 2019/12/16 v2.5j Standard LaTeX font definitions
-) [18
+) [17
 
-] [19] [20]
+] [18]
 Cap\'{\i }tulo 5.
 
-Overfull \hbox (23.12581pt too wide) in paragraph at lines 570--571
+Overfull \hbox (23.12581pt too wide) in paragraph at lines 515--516
 []\T1/cmr/m/n/12 Cada as-set im-por-tan-te cuen-ta con uno o más as-set checks 
 im-ple-men-ta-dos en lab_renta_checks.py.
  []
 
+[19
+
+] [20]
+Cap\'{\i }tulo 6.
 [21
 
-] [22] [23]
-Cap\'{\i }tulo 6.
-[24
-
 ]
-Overfull \hbox (49.25967pt too wide) in paragraph at lines 720--721
+Overfull \hbox (49.25967pt too wide) in paragraph at lines 652--653
 []\T1/cmr/m/n/12 El es-ti-lo vi-sual se per-so-na-li-za con CSS in-yec-ta-do me
 -dian-te st.markdown con un-sa-fe_allow_html=True.
  []
@@ -664,23 +651,23 @@ File: lstlang1.sty 2020/03/24 1.8d listings language file
 )
 (/usr/share/texlive/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2020/03/24 1.8d listings language file
-) [25] [26
+) [22] [23
 
 ]
-[27] [28] [29
+[24] [25] [26
 
 ] (output/memtfg.aux)
 Package rerunfilecheck Info: File `memtfg.out' has not changed.
-(rerunfilecheck)             Checksum: 7E5C6BA4F3F7EBFCE50F22F8FF37B70E;9303.
+(rerunfilecheck)             Checksum: 7E519837E179281911206BA2238DC476;8265.
  ) 
 Here is how much of TeX's memory you used:
- 15025 strings out of 480185
- 237030 string characters out of 5894213
- 1150060 words of memory out of 5000000
- 32545 multiletter control sequences out of 15000+600000
+ 14988 strings out of 480185
+ 236520 string characters out of 5894213
+ 1153060 words of memory out of 5000000
+ 32528 multiletter control sequences out of 15000+600000
  481617 words of font info for 56 fonts, out of 8000000 for 9000
  40 hyphenation exceptions out of 8191
- 60i,10n,63p,586b,1915s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 60i,10n,63p,487b,1915s stack positions out of 5000i,500n,10000p,200000b,80000s
  </home/francisco/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/ec/ectt1200
 .600pk> </home/francisco/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/ec/ect
 t1095.600pk> </home/francisco/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/e
@@ -694,10 +681,10 @@ var/fonts/pk/ljfour/jknappen/ec/ecbx1728.600pk> </home/francisco/.texlive2021/t
 exmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1728.600pk> </home/francisco/.texlive2
 021/texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1440.600pk> </home/francisco/.tex
 live2021/texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm2488.600pk>
-Output written on output/memtfg.pdf (32 pages, 935763 bytes).
+Output written on output/memtfg.pdf (28 pages, 784882 bytes).
 PDF statistics:
- 1139 PDF objects out of 1200 (max. 8388607)
- 578 compressed objects within 6 object streams
- 236 named destinations out of 1000 (max. 500000)
- 399 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 1081 PDF objects out of 1200 (max. 8388607)
+ 527 compressed objects within 6 object streams
+ 217 named destinations out of 1000 (max. 500000)
+ 354 words of extra memory for PDF output out of 10000 (max. 10000000)
 

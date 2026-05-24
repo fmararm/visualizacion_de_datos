@@ -6,47 +6,132 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="Dos Tenerifes",
-    page_icon="🏝️",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ---------------------------------------------------------------------------
-# CSS personalizado
+# CSS dramático
 # ---------------------------------------------------------------------------
 st.markdown("""
 <style>
-    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
-    h1 { color: #1a1a2e; }
-    h2 { color: #16213e; border-bottom: 2px solid #e94560; padding-bottom: 0.3rem; }
-    h3 { color: #0f3460; }
+    /* Fondo oscuro en toda la aplicación */
+    .stApp {
+        background-color: #111111;
+    }
+    [data-testid="stAppViewContainer"] {
+        background-color: #111111;
+    }
+    [data-testid="stMain"] {
+        background-color: #111111;
+    }
+    .block-container {
+        background-color: #111111;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    [data-testid="stSidebar"] {
+        background-color: #0d0d0d;
+    }
+    [data-testid="stSidebar"] .stRadio label,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] div {
+        color: #cccccc !important;
+    }
+    [data-testid="stSidebar"] hr {
+        border-color: #333333;
+    }
+    [data-testid="stSidebar"] strong {
+        color: #ffffff !important;
+    }
+
+    h1 {
+        color: #ffffff !important;
+        font-size: 2.8rem !important;
+        font-weight: 900 !important;
+        letter-spacing: -0.03em;
+        border-bottom: 5px solid #b03a2e;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.2rem;
+    }
+    h2 {
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.02em;
+        border-bottom: 3px solid #b03a2e;
+        padding-bottom: 0.3rem;
+        margin-top: 1.8rem;
+    }
+    h3 {
+        color: #eeeeee !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.01em;
+    }
+    p, li, td, th {
+        color: #dddddd !important;
+    }
+
     .caption-box {
-        background: #f8f9fa;
-        border-left: 4px solid #4575b4;
-        padding: 0.8rem 1rem;
-        border-radius: 0 6px 6px 0;
-        margin: 0.5rem 0 1.5rem 0;
-        font-size: 0.92rem;
-        color: #444;
-        line-height: 1.6;
+        background: #111111;
+        border-left: 4px solid #555555;
+        padding: 0.9rem 1.1rem;
+        border-radius: 0 4px 4px 0;
+        margin: 0.4rem 0 1rem 0;
+        font-size: 0.88rem;
+        color: #aaaaaa !important;
+        line-height: 1.7;
+        font-style: italic;
     }
     .insight-box {
-        background: #fff8e1;
-        border-left: 4px solid #f9a825;
-        padding: 0.8rem 1rem;
-        border-radius: 0 6px 6px 0;
-        margin: 0.5rem 0 1.5rem 0;
-        font-size: 0.92rem;
-        color: #444;
-        line-height: 1.6;
+        background: #7b241c;
+        border-left: 6px solid #b03a2e;
+        padding: 1rem 1.2rem;
+        border-radius: 0 4px 4px 0;
+        margin: 0.4rem 0 1.8rem 0;
+        font-size: 0.95rem;
+        color: #ffffff !important;
+        line-height: 1.7;
+        font-weight: 600;
     }
     .section-intro {
-        font-size: 1.05rem;
-        color: #555;
-        line-height: 1.7;
-        margin-bottom: 1.5rem;
+        font-size: 1.08rem;
+        color: #dddddd !important;
+        line-height: 1.85;
+        margin-bottom: 1.8rem;
+        border-left: 5px solid #b03a2e;
+        padding-left: 1.2rem;
     }
-    .stTabs [data-baseweb="tab"] { font-size: 0.9rem; }
+
+    div[data-testid="stMetric"] {
+        background: #0d0d0d;
+        border-radius: 4px;
+        padding: 1rem 1.2rem;
+    }
+    div[data-testid="stMetricLabel"] p {
+        color: #888888 !important;
+        text-transform: uppercase;
+        font-size: 0.72rem !important;
+        letter-spacing: 0.12em;
+    }
+    div[data-testid="stMetricValue"] {
+        color: #b03a2e !important;
+        font-size: 2.2rem !important;
+        font-weight: 900 !important;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #b03a2e !important;
+        border-bottom-color: #b03a2e !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -60,74 +145,74 @@ def plot(path: str, caption: str = "", insight: str = "", width: int = None):
     if caption:
         st.markdown(f'<div class="caption-box">{caption}</div>', unsafe_allow_html=True)
     if insight:
-        st.markdown(f'<div class="insight-box">💡 {insight}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="insight-box">{insight}</div>', unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
-# Sidebar — navegación
+# Sidebar
 # ---------------------------------------------------------------------------
 SECCIONES = [
-    "🏠 Introducción",
-    "📊 La fractura de la renta",
-    "📉 Desigualdad interna",
-    "💼 Actividad y ocupación",
-    "⚖️ Brecha de género",
-    "🗺️ Mapa interactivo",
+    "Introducción",
+    "La fractura de la renta",
+    "Desigualdad interna",
+    "Actividad y ocupación",
+    "Brecha de género",
+    "Mapa interactivo",
 ]
 seccion = st.sidebar.radio("Navegar a", SECCIONES)
 st.sidebar.markdown("---")
 st.sidebar.markdown(
-    "**Proyecto final** · Visualización de Datos 2025–2026  \n"
-    "Fuente: INE · Atlas de Distribución de Renta de los Hogares"
+    "**Proyecto final**  \n"
+    "Visualización de Datos 2025-2026  \n"
+    "Fuente: INE, Atlas de Distribución de Renta de los Hogares"
 )
 
 # ===========================================================================
 # 1. INTRODUCCIÓN
 # ===========================================================================
-if seccion == "🏠 Introducción":
-    st.title("🏝️ Dos Tenerifes")
+if seccion == "Introducción":
+    st.title("Dos Tenerifes")
     st.markdown(
         '<p class="section-intro">'
-        "Tenerife es una isla de contrastes. Bajo una imagen turística homogénea "
-        "conviven realidades económicas muy distintas: municipios con renta media "
-        "superior a 50 000 € por hogar y otros que no alcanzan los 25 000 €; "
-        "secciones censales donde casi la mitad de los ingresos provienen de "
-        "prestaciones, junto a otras donde el trabajo cualificado domina. "
-        "Este dashboard explora esa fractura a través de los datos del "
-        "<b>Atlas de Distribución de Renta de los Hogares del INE (2021–2023)</b>."
+        "Tenerife no es una isla. Son dos. Una acumula renta, empleo cualificado y "
+        "oportunidades y la otra sostiene la economía de servicio. Los datos del "
+        "<strong>Atlas de Distribución de Renta de los Hogares del INE (2021-2023)</strong> "
+        "permiten ver con precisión dónde está la línea que las separa, y confirmar "
+        "que esa línea no se ha movido."
         "</p>",
         unsafe_allow_html=True,
     )
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Municipios analizados", "54")
-    col2.metric("Años cubiertos", "2021 – 2023")
-    col3.metric("Secciones censales", "≈ 681")
-    col4.metric("Ratio renta máx/mín", "≈ 3×")
+    col2.metric("Años cubiertos", "2021 - 2023")
+    col3.metric("Secciones censales", "681")
+    col4.metric("Ratio renta max/min", "3x")
 
     st.markdown("---")
-    st.markdown("### ¿Qué encontrarás aquí?")
+    st.markdown("### Qué encontrarás aquí")
     st.markdown("""
 | Sección | Qué muestra |
 |---|---|
-| 📊 La fractura de la renta | Ranking de municipios, distribución y evolución temporal |
-| 📉 Desigualdad interna | Desigualdad dentro de cada municipio e isla, correlación con ocupación |
-| 💼 Actividad y ocupación | Composición del empleo y cómo varía según el nivel de renta |
-| ⚖️ Brecha de género | Diferencias por sexo en las categorías de ocupación |
-| 🗺️ Mapa interactivo | Exploración espacial de las 4 variables clave |
+| La fractura de la renta | Ranking de municipios, distribución y evolución temporal |
+| Desigualdad interna | Desigualdad dentro de cada municipio e isla, correlación con ocupación |
+| Actividad y ocupación | Composición del empleo y cómo varía según el nivel de renta |
+| Brecha de género | Diferencias por sexo en las categorías de ocupación |
+| Mapa interactivo | Exploración espacial de las 4 variables clave |
 """)
 
 # ===========================================================================
 # 2. LA FRACTURA DE LA RENTA
 # ===========================================================================
-elif seccion == "📊 La fractura de la renta":
-    st.header("📊 La fractura de la renta")
+elif seccion == "La fractura de la renta":
+    st.header("La fractura de la renta")
     st.markdown(
         '<p class="section-intro">'
-        "Los datos revelan una isla partida en dos: un grupo reducido de municipios "
-        "concentra la renta alta mientras la mayoría queda muy por debajo de la media. "
-        "El histograma evidencia que la distribución está claramente sesgada a la derecha, "
-        "con una cola de secciones muy ricas que elevan la media sin representar a la mayoría."
+        "Hay municipios en Tenerife que triplican la renta de otros situados a menos "
+        "de 50 kilómetros. No es una anomalía estadística ni un efecto puntual de la "
+        "pandemia: es una estructura que los datos de tres años consecutivos reproducen "
+        "con precisión. La isla que vende igualdad de sol y playa es, en términos "
+        "económicos, profundamente asimétrica."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -136,12 +221,14 @@ elif seccion == "📊 La fractura de la renta":
     plot(
         "plots/renta/lollipop_ranking_municipios.png",
         caption=(
-            "Top 15 y bottom 15 municipios de Tenerife ordenados por renta neta media por hogar (2023). "
-            "La brecha entre el municipio más rico y el más pobre supera el factor 2×."
+            "Primeros y últimos 15 municipios de Tenerife ordenados por renta neta media "
+            "por hogar (2023). La distancia entre el primero y el último supera el factor 2."
         ),
         insight=(
-            "Los municipios del sur turístico (Adeje, Arona) aparecen en posiciones intermedias, "
-            "lo que sugiere que el turismo genera empleo pero no necesariamente renta elevada para sus residentes."
+            "Los municipios del sur turístico aparecen en posiciones intermedias. "
+            "El turismo de masas genera empleo pero no redistribuye renta: "
+            "quienes sirven las mesas y limpian las habitaciones viven en secciones "
+            "censales que no salen de la mitad baja del ranking."
         ),
     )
 
@@ -152,48 +239,62 @@ elif seccion == "📊 La fractura de la renta":
             "plots/renta/histograma_hist_renta.png",
             caption=(
                 "Histograma de la renta neta media por sección censal (2023). "
-                "La distribución es asimétrica positiva: la mayoría de secciones concentra rentas "
-                "entre 25 000 € y 45 000 €, pero existe una larga cola de secciones muy ricas."
+                "La distribución es asimétrica positiva: la mayoría de secciones "
+                "se concentra entre 25.000 y 45.000 euros, pero una cola larga "
+                "de secciones muy ricas eleva artificialmente la media."
+            ),
+            insight=(
+                "La media estadística de la isla miente sobre la experiencia "
+                "de la mayoría. Gran parte de las secciones censales vive "
+                "por debajo de ella. Los outliers de la cola derecha no son "
+                "la norma: son la excepción que distorsiona el promedio."
             ),
         )
     with col2:
-        st.subheader("Evolución 2021–2023")
+        st.subheader("Evolución 2021-2023")
         plot(
             "plots/renta/heatmap_renta_municipio.png",
             caption=(
-                "Heatmap de renta media por municipio y año. "
-                "El color verde indica mayor renta. "
-                "Se puede observar si la brecha entre municipios se amplía o estrecha con el tiempo."
+                "Heatmap de renta media por municipio y año (2021-2023). "
+                "Verde intenso indica renta alta; amarillo, renta baja. "
+                "El orden de los municipios es constante en los tres años."
             ),
             insight=(
-                "La mayoría de municipios mejoran su posición relativa de forma homogénea, "
-                "pero los extremos (los más ricos y los más pobres) tienden a mantenerse estables."
+                "Tres años de datos cuentan la misma historia: los municipios "
+                "ricos permanecen verdes y los pobres no salen del amarillo. "
+                "La pandemia no igualó. El boom turístico no igualó. "
+                "La jerarquía económica de la isla es estructural."
             ),
         )
 
-    st.subheader("¿Quién mejoró y quién empeoró? (2021–2023)")
+    st.subheader("Quién mejoró y quién quedó atrás (2021-2023)")
     plot(
         "plots/renta/slope_brecha_temporal.png",
         caption=(
-            "Slope chart que muestra la evolución de la renta por municipio entre 2021 y 2023. "
-            "Las líneas verdes indican municipios que mejoran su renta; las rojas, los que empeoran."
+            "Slope chart de la renta por municipio entre 2021 y 2023. "
+            "Líneas rojas: municipios que pierden posición relativa. "
+            "Líneas verdes: municipios que mejoran."
         ),
-        insight="La mayor parte de municipios sube, pero los que ya eran pobres crecen proporcionalmente menos.",
+        insight=(
+            "El crecimiento existe, pero tiene dueños claros. "
+            "Los municipios que ya partían de una posición baja crecen "
+            "proporcionalmente menos que los que ya eran ricos. "
+            "La fractura no se cierra: se consolida."
+        ),
     )
 
 # ===========================================================================
 # 3. DESIGUALDAD INTERNA
 # ===========================================================================
-elif seccion == "📉 Desigualdad interna":
-    st.header("📉 Desigualdad interna")
+elif seccion == "Desigualdad interna":
+    st.header("Desigualdad interna")
     st.markdown(
         '<p class="section-intro">'
-        "Más allá de la comparación entre municipios, la desigualdad también existe "
-        "<em>dentro</em> de cada municipio. Las secciones censales de Santa Cruz de Tenerife "
-        "o San Cristóbal de La Laguna muestran una dispersión interna enorme, "
-        "con barrios muy ricos y muy pobres separados por pocos kilómetros. "
-        "Además, existe una correlación clara entre el tipo de trabajo disponible "
-        "y el nivel de renta de la sección."
+        "La comparación entre municipios subestima la magnitud del problema. "
+        "Dentro de Santa Cruz de Tenerife o de San Cristóbal de La Laguna "
+        "coexisten secciones censales separadas por menos de cinco kilómetros "
+        "y más de 60.000 euros de diferencia en renta media. "
+        "La desigualdad no es solo geográfica: es de calle a calle, de bloque a bloque."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -204,27 +305,35 @@ elif seccion == "📉 Desigualdad interna":
         "de un municipio. Cuanto más ancha la caja y más largos los bigotes, "
         "mayor desigualdad interna."
     )
-    tabs = st.tabs(["🟦 Tenerife", "🟩 La Palma", "🟨 La Gomera", "🟥 El Hierro"])
+    tabs = st.tabs(["Tenerife", "La Palma", "La Gomera", "El Hierro"])
     configs = [
-        ("plots/renta/boxplot_desigualdad_intramunicipal_tenerife.png",
-         "Tenerife concentra la mayor dispersión interna. "
-         "Santa Cruz y La Laguna tienen los rangos más amplios, con outliers extremos "
-         "que corresponden a las urbanizaciones de mayor renta.",
-         "La amplitud del bigote derecho en Santa Cruz de Tenerife evidencia "
-         "que conviven barrios con rentas >80 000 € junto a secciones por debajo de 25 000 €."),
-        ("plots/renta/boxplot_desigualdad_intramunicipal_la_palma.png",
-         "La Palma muestra municipios con distribuciones más compactas. "
-         "Santa Cruz de La Palma destaca como el municipio con mayor dispersión de la isla.",
-         None),
-        ("plots/renta/boxplot_desigualdad_intramunicipal_la_gomera.png",
-         "La Gomera tiene pocos municipios y pocas secciones. "
-         "San Sebastián de La Gomera presenta la renta más alta y mayor dispersión.",
-         None),
-        ("plots/renta/boxplot_desigualdad_intramunicipal_el_hierro.png",
-         "El Hierro, con solo 3 municipios, muestra las rentas más bajas del archipiélago "
-         "y poca variabilidad interna.",
-         "El Hierro es la isla con menor renta media pero también la que tiene "
-         "menor desigualdad interna."),
+        (
+            "plots/renta/boxplot_desigualdad_intramunicipal_tenerife.png",
+            "Tenerife. Cada caja representa un municipio; los puntos son secciones atípicas. "
+            "El rango intercuartílico de Santa Cruz y La Laguna es el más amplio de toda la provincia.",
+            "Santa Cruz de Tenerife tiene secciones censales con rentas superiores a 80.000 euros "
+            "por hogar y otras que no alcanzan los 20.000 euros. La misma ciudad, "
+            "dos realidades económicas que no se tocan."
+        ),
+        (
+            "plots/renta/boxplot_desigualdad_intramunicipal_la_palma.png",
+            "La Palma. Distribuciones más compactas que Tenerife, "
+            "pero Santa Cruz de La Palma concentra la mayor dispersión de la isla.",
+            None
+        ),
+        (
+            "plots/renta/boxplot_desigualdad_intramunicipal_la_gomera.png",
+            "La Gomera. Pocos municipios y pocas secciones. "
+            "San Sebastián de La Gomera presenta la renta más alta y la mayor dispersión.",
+            None
+        ),
+        (
+            "plots/renta/boxplot_desigualdad_intramunicipal_el_hierro.png",
+            "El Hierro. Solo 3 municipios. Rentas sistemáticamente más bajas que el resto "
+            "del archipiélago, con poca variabilidad interna.",
+            "El Hierro es la isla con menor renta media y también la que tiene menor "
+            "desigualdad interna. Cuando todos son pobres por igual, la caja se estrecha."
+        ),
     ]
     for tab, (img, cap, ins) in zip(tabs, configs):
         with tab:
@@ -234,28 +343,30 @@ elif seccion == "📉 Desigualdad interna":
     plot(
         "plots/renta/scatter_elementales_renta.png",
         caption=(
-            "Scatter plot de secciones censales: eje X = % de trabajadores en ocupaciones elementales, "
-            "eje Y = renta neta media, tamaño de la burbuja = número total de trabajadores (2023). "
-            "La línea roja muestra la tendencia lineal."
+            "Scatter de secciones censales: eje X = porcentaje de trabajadores en ocupaciones "
+            "elementales, eje Y = renta neta media, tamaño de burbuja = número total de trabajadores "
+            "(2023). Línea de tendencia en rojo."
         ),
         insight=(
-            "La correlación negativa es significativa: las secciones con más trabajadores en ocupaciones "
-            "elementales tienen sistemáticamente menos renta. Es la huella estadística de la segregación "
-            "laboral y residencial."
+            "La pendiente no engaña. Cuanto mayor el peso de las ocupaciones elementales, "
+            "menor la renta de toda la sección. No es una correlación débil ni ruidosa: "
+            "es una caída sistemática que dibuja el mapa de la segregación laboral y "
+            "residencial de Tenerife con una claridad que incomoda."
         ),
     )
 
 # ===========================================================================
 # 4. ACTIVIDAD Y OCUPACIÓN
 # ===========================================================================
-elif seccion == "💼 Actividad y ocupación":
-    st.header("💼 Actividad y ocupación")
+elif seccion == "Actividad y ocupación":
+    st.header("Actividad y ocupación")
     st.markdown(
         '<p class="section-intro">'
-        "La estructura productiva de Tenerife está dominada por los Servicios, "
-        "pero la distribución del empleo varía significativamente según el nivel de renta "
-        "de la sección censal. Analizar qué tipo de trabajo realizan los residentes "
-        "de cada quintil revela los mecanismos de reproducción de la desigualdad."
+        "Todos trabajan en Servicios. Pero no en el mismo Servicios. "
+        "La etiqueta sectorial es la misma para quien dirige un hotel de lujo "
+        "y para quien limpia sus habitaciones. Lo que los separa (la ocupación, "
+        "la renta, el barrio donde viven) queda oculto bajo esa misma categoría. "
+        "Los datos de quintiles lo hacen visible."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -266,12 +377,14 @@ elif seccion == "💼 Actividad y ocupación":
         plot(
             "plots/renta/waterfall_fuentes_ingresos.png",
             caption=(
-                "Waterfall de la composición media de ingresos por sección censal en Tenerife (2023). "
+                "Composición media de ingresos por sección censal en Tenerife (2023). "
                 "Cada barra representa el peso porcentual de cada fuente sobre el total."
             ),
             insight=(
-                "Los sueldos y salarios dominan, pero las pensiones tienen un peso "
-                "sorprendentemente alto, lo que refleja el envejecimiento de la población residente."
+                "Las pensiones tienen un peso desproporcionado. Tenerife envejece, "
+                "y una fracción significativa de su renta disponible procede no del "
+                "trabajo activo sino de prestaciones acumuladas. "
+                "Cuando ese colchón demográfico se erosione, la fractura se profundizará."
             ),
         )
     with col2:
@@ -279,28 +392,30 @@ elif seccion == "💼 Actividad y ocupación":
         plot(
             "plots/actividad/waterfall_actividades.png",
             caption=(
-                "Waterfall del % de trabajadores por sector CNAE en Tenerife (2023). "
-                "Los Servicios concentran más del 85% del empleo, seguidos de Construcción e Industria."
+                "Porcentaje de trabajadores por sector CNAE en Tenerife (2023). "
+                "Los Servicios concentran más del 85% del empleo."
             ),
             insight=(
-                "La hiperconcentración en Servicios hace a la economía de Tenerife "
-                "especialmente dependiente del turismo y vulnerable a sus ciclos."
+                "Una sola crisis en el turismo golpea a casi toda la fuerza de trabajo activa. "
+                "No es diversificación económica: es dependencia total. "
+                "Tenerife conoce bien ese riesgo, y sigue sin resolverlo."
             ),
         )
 
-    st.subheader("¿En qué trabajan los más ricos y los más pobres?")
+    st.subheader("En qué trabajan los más ricos y los más pobres")
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**Por sector de actividad**")
         plot(
             "plots/renta/grouped_bar_ingresos_quintiles.png",
             caption=(
-                "% de trabajadores en cada sector de actividad según quintil de renta (2023). "
+                "Porcentaje de trabajadores en cada sector de actividad según quintil de renta (2023). "
                 "Q1 = 20% más pobre, Q5 = 20% más rico."
             ),
             insight=(
-                "Los Servicios dominan todos los quintiles, pero en Q5 (más rico) "
-                "su peso es mayor (~90%) y Construcción y Agricultura casi desaparecen."
+                "El Q5 trabaja en Servicios financieros, de gestión y consultoría. "
+                "El Q1 trabaja en hostelería, limpieza y comercio minorista. "
+                "La etiqueta sectorial es idéntica; la realidad económica, opuesta."
             ),
         )
     with col2:
@@ -308,27 +423,29 @@ elif seccion == "💼 Actividad y ocupación":
         plot(
             "plots/renta/grouped_bar_ocupacion_quintiles.png",
             caption=(
-                "% de trabajadores en cada categoría de ocupación según quintil de renta (2023). "
-                "La composición por tipo de trabajo cambia drásticamente entre quintiles."
+                "Porcentaje de trabajadores en cada categoría de ocupación según quintil de renta (2023). "
+                "La composición cambia drásticamente del Q1 al Q5."
             ),
             insight=(
-                "En Q1 el 61% son trabajadores cualificados/operarios; en Q5 ese porcentaje cae al 42% "
-                "mientras los Directores/técnicos suben del 20% al 51%. "
-                "Las Ocupaciones elementales pasan del 19% al 7%."
+                "Del Q1 al Q5, la categoría 'Directores y técnicos' pasa del 20% al 51%. "
+                "Las ocupaciones elementales (las peor remuneradas) concentran en el quintil "
+                "más pobre casi el doble de trabajadores que en el más rico. "
+                "No es talento distribuido al azar: es el resultado acumulado del barrio "
+                "en que se nació, la educación recibida y el capital social heredado."
             ),
         )
 
 # ===========================================================================
 # 5. BRECHA DE GÉNERO
 # ===========================================================================
-elif seccion == "⚖️ Brecha de género":
-    st.header("⚖️ Brecha de género")
+elif seccion == "Brecha de género":
+    st.header("Brecha de género")
     st.markdown(
         '<p class="section-intro">'
-        "La segregación ocupacional por género es otro eje de desigualdad. "
-        "Aunque globalmente hay paridad numérica entre hombres y mujeres en el empleo, "
-        "la distribución entre categorías de ocupación no es simétrica. "
-        "Esto tiene implicaciones directas sobre la brecha salarial."
+        "La paridad numérica en el empleo total oculta una segregación funcional "
+        "que los datos de ocupación hacen aflorar. Las mujeres no están ausentes "
+        "del mercado laboral de Tenerife: están presentes en las categorías "
+        "que menos cobran. Eso no es igualdad. Es la apariencia de ella."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -337,29 +454,32 @@ elif seccion == "⚖️ Brecha de género":
     plot(
         "plots/genero/piramide_ocupacion.png",
         caption=(
-            "Diverging bar chart que muestra la desviación porcentual respecto a la paridad (50/50) "
-            "para cada categoría de ocupación en Tenerife (2023). "
-            "Barras hacia la derecha (rojo) = más mujeres; hacia la izquierda (azul) = más hombres."
+            "Desviación porcentual respecto a la paridad (50/50) para cada categoría "
+            "de ocupación en Tenerife (2023). "
+            "Barras a la derecha = más mujeres; a la izquierda = más hombres."
         ),
         insight=(
-            "Los 'Trabajadores cualificados/operarios' son el único sector con predominio masculino "
-            "significativo (~55% hombres). 'Directores/técnicos' y 'Ocupaciones elementales' "
-            "tienen leve mayoría femenina, pero en estos últimos la renta es más baja, "
-            "lo que contribuye a la brecha salarial de género."
+            "Las mujeres están sobrerrepresentadas en las ocupaciones elementales, "
+            "las de menor retribución. Los hombres dominan el trabajo cualificado "
+            "de operario y técnico, mejor remunerado. "
+            "La brecha salarial de género no es una abstracción estadística: "
+            "es la suma de estas asimetrías repetidas en cada sección censal de la isla."
         ),
     )
 
 # ===========================================================================
 # 6. MAPA INTERACTIVO
 # ===========================================================================
-elif seccion == "🗺️ Mapa interactivo":
-    st.header("🗺️ Mapa interactivo de secciones censales")
+elif seccion == "Mapa interactivo":
+    st.header("Mapa interactivo de secciones censales")
     st.markdown(
         '<p class="section-intro">'
-        "El mapa permite explorar espacialmente cuatro variables clave a nivel de "
-        "sección censal: renta neta media, peso de las prestaciones por desempleo, "
-        "porcentaje de trabajadores en Servicios y brecha de género en ocupaciones elementales. "
-        "Usa el selector de capas para cambiar entre variables."
+        "La fractura que los gráficos describen tiene coordenadas precisas. "
+        "El mapa muestra tres capas a nivel de sección censal: "
+        "renta neta media por hogar, porcentaje de ingresos por desempleo "
+        "y porcentaje de trabajadores en Servicios. "
+        "Cambia de capa para ver cómo se superponen las distintas caras de la desigualdad "
+        "sobre el mismo territorio."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -369,17 +489,17 @@ elif seccion == "🗺️ Mapa interactivo":
     if map_path.exists():
         with open(map_path, "r", encoding="utf-8") as f:
             html = f.read()
-        st.components.v1.html(html, height=600, scrolling=False)
+        st.components.v1.html(html, height=620, scrolling=False)
     else:
         st.info(
             "El mapa no se ha generado todavía. "
-            "Materializa el asset `interactive_secciones_map` en Dagster para generarlo."
+            "Materializa el asset interactive_secciones_map en Dagster para generarlo."
         )
 
     st.markdown("---")
     st.markdown(
         "También disponible en GitHub Pages: "
-        "[Ver mapa completo](https://fmararm.github.io/master/index_map.html) · "
-        "O en local en `http://127.0.0.1:8050/secciones_map.html` "
-        "(ejecutar `interactive_secciones_map` en Dagster)."
+        "[Ver mapa completo](https://fmararm.github.io/visualizacion_de_datos/index_map.html). "
+        "En local: http://127.0.0.1:8050/secciones_map.html "
+        "(requiere materializar el asset en Dagster)."
     )

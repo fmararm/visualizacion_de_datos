@@ -126,8 +126,6 @@ El mapa publicado está en:
 
 **[https://fmararm.github.io/visualizacion_de_datos/index_map.html](https://fmararm.github.io/visualizacion_de_datos/index_map.html)**
 
-> Para activar GitHub Pages por primera vez: en el repositorio ve a **Settings → Pages**, selecciona rama `main` y carpeta `/docs`, y guarda.
-
 ### Ver en local tras materializar
 
 Al materializar el asset `interactive_secciones_map`, Dagster levanta automáticamente un servidor HTTP en el puerto 8050. El mapa queda accesible en:

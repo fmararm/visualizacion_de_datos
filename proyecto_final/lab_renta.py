@@ -290,10 +290,11 @@ def prompt_ranking_municipios(data_renta_municipio):
     - Columnas: municipio (str), renta_media (float, euros)
     - Preprocesamiento: tomar top 15 y bottom 15 por renta_media.
       Añadir columna 'grupo' = 'Top 15' o 'Bottom 15'. Concatenar ambos.
-    - Geometría: lollipop horizontal.
+    - Geometría: lollipop horizontal. El segmento y el punto usan el mismo color por grupo.
       geom_segment(aes(x=0, xend='renta_media', y='reorder(municipio,renta_media)',
-                       yend='reorder(municipio,renta_media)'), color='gray', size=0.6) +
+                       yend='reorder(municipio,renta_media)', color='grupo'), size=0.8) +
       geom_point(aes(x='renta_media', y='reorder(municipio,renta_media)', color='grupo'), size=3).
+    - Colores: scale_color_manual(values={'Bottom 15': '#b03a2e', 'Top 15': '#2166ac'}).
     - Título: 'Los municipios más ricos y más pobres de Tenerife (2023)'
     - Eje X: 'Renta neta media por hogar (€)'. Eje Y: ''.
     - Tema: theme_minimal(). Ocultar leyenda de color.
