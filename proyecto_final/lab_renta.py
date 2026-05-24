@@ -233,57 +233,6 @@ def data_hist_renta(rentamedia_clean):
     )
 
 
-@asset
-def data_servicios_vs_renta(actividad_clean, rentamedia_clean):
-    """Por sección (2023): % trabajadores en Servicios vs renta neta. Para bubble chart."""
-    act = actividad_clean[actividad_clean['Periodo'] == 2023]
-    total = act.groupby('geo_key')['num_casos'].sum().rename('total')
-    svc = (
-        act[act['Actividad económica'] == 'Servicios']
-        .groupby('geo_key')['num_casos'].sum()
-        .rename('servicios')
-    )
-    pct = (
-        pd.concat([total, svc], axis=1)
-        .assign(pct_servicios=lambda x: x['servicios'] / x['total'].replace(0, np.nan) * 100)
-        .dropna(subset=['pct_servicios'])
-        .reset_index()
-    )
-    renta = rentamedia_clean[
-        (rentamedia_clean['año'] == 2023) &
-        (rentamedia_clean['MEDIDAS_CODE'] == 'RENTA_NETA_MEDIA_HOGAR')
-    ][['geo_key', 'OBS_VALUE', 'municipio']].rename(columns={'OBS_VALUE': 'renta_neta'})
-    return pct.merge(renta, on='geo_key', how='inner')
-
-
-@asset
-def data_brecha_genero(ocupacion_clean):
-    """
-    Por municipio (2023): desviación de paridad (% mujeres − 50) en ocupaciones elementales.
-    Para diverging bar.
-    """
-    df = ocupacion_clean[ocupacion_clean['año'] == 2023]
-    cat_elem = 'Ocupaciones elementales'
-
-    rows = []
-    for municipio, grp in df.groupby('municipio'):
-        sub = grp[grp['ocupacion'] == cat_elem]
-        total = sub['num_casos'].sum()
-        if total == 0:
-            continue
-        pct = sub.loc[sub['sexo'] == 'Mujeres', 'num_casos'].sum() / total * 100
-        rows.append({
-            'municipio':  municipio,
-            'pct_mujeres': round(pct, 1),
-            'desviacion':  round(pct - 50, 1),
-        })
-
-    return (
-        pd.DataFrame(rows)
-        .dropna()
-        .sort_values('desviacion')
-        .reset_index(drop=True)
-    )
 
 
 @asset
@@ -327,58 +276,6 @@ def data_piramide_ocupacion(ocupacion_clean):
     return pivot[['ocupacion', 'desviacion', 'mayoria', 'total']]
 
 
-@asset
-def data_marimekko_sectores(actividad_clean, rentamedia_clean):
-    """
-    Composición sectorial del empleo según grupo de renta (Baja/Media/Alta), 2023.
-    Columnas xmin/xmax/ymin/ymax pre-calculadas para geom_rect (Marimekko).
-    """
-    SECTORES = ['Servicios', 'Construcción', 'Industria', 'Agricultura, ganadería y pesca']
-    ORDEN_G  = ['Baja renta', 'Media renta', 'Alta renta']
-
-    # Secciones con grupo de renta asignado
-    renta_sec = (
-        rentamedia_clean[
-            (rentamedia_clean['año'] == 2023) &
-            (rentamedia_clean['MEDIDAS_CODE'] == 'RENTA_NETA_MEDIA_HOGAR')
-        ][['geo_key', 'OBS_VALUE']]
-        .drop_duplicates('geo_key')
-        .copy()
-    )
-    renta_sec['grupo_renta'] = pd.qcut(
-        renta_sec['OBS_VALUE'], q=3, labels=ORDEN_G
-    )
-
-    # Trabajadores por (grupo_renta, sector)
-    act = actividad_clean[
-        (actividad_clean['Periodo'] == 2023) &
-        (actividad_clean['Actividad económica'].isin(SECTORES))
-    ].merge(renta_sec[['geo_key', 'grupo_renta']], on='geo_key', how='inner')
-
-    mat = (
-        act.groupby(['grupo_renta', 'Actividad económica'], as_index=False)['num_casos'].sum()
-        .rename(columns={'Actividad económica': 'sector'})
-    )
-
-    # Anchos de columna (proporcional al total de trabajadores por grupo)
-    g_totals = mat.groupby('grupo_renta')['num_casos'].sum().reset_index(name='total_grupo')
-    g_totals['grupo_renta'] = pd.Categorical(g_totals['grupo_renta'], categories=ORDEN_G, ordered=True)
-    g_totals = g_totals.sort_values('grupo_renta')
-    g_totals['width'] = g_totals['total_grupo'] / g_totals['total_grupo'].sum()
-    g_totals['xmax']  = g_totals['width'].cumsum()
-    g_totals['xmin']  = g_totals['xmax'] - g_totals['width']
-    g_totals['xcenter'] = (g_totals['xmin'] + g_totals['xmax']) / 2
-
-    # Alturas de cada sector dentro de cada columna
-    mat = mat.merge(g_totals[['grupo_renta', 'total_grupo', 'xmin', 'xmax', 'xcenter']], on='grupo_renta')
-    mat['pct'] = mat['num_casos'] / mat['total_grupo']
-    mat['sector'] = pd.Categorical(mat['sector'], categories=SECTORES, ordered=True)
-    mat = mat.sort_values(['grupo_renta', 'sector'])
-    mat['ymax']    = mat.groupby('grupo_renta')['pct'].cumsum()
-    mat['ymin']    = mat['ymax'] - mat['pct']
-    mat['ycenter'] = (mat['ymin'] + mat['ymax']) / 2
-
-    return mat.reset_index(drop=True)
 
 
 # ---------------------------------------------------------------------------
@@ -435,51 +332,7 @@ def hist_renta(context, prompt_hist_renta, data_hist_renta):
     return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
 
 
-# 3. Bubble — paradoja del turismo (ángulo C)
-@asset
-def prompt_servicios_vs_renta(data_servicios_vs_renta):
-    desc = """
-    - Dataset: data_servicios_vs_renta
-    - Columnas: pct_servicios (float, 0-100), renta_neta (float, €), total (int, trabajadores), municipio (str)
-    - Geometría: bubble chart.
-      geom_point(aes(x='pct_servicios', y='renta_neta', size='total'),
-                 color='#4575b4', alpha=0.35) +
-      scale_size_continuous(range=(1, 12), name='Trabajadores').
-    - Título: 'La paradoja del turismo: más servicios, ¿menos renta? (2023)'
-    - Eje X: '% trabajadores en Servicios'. Eje Y: 'Renta neta por hogar (€)'.
-    - Tema: theme_minimal().
-    """
-    return get_ai_template(None, desc, data_servicios_vs_renta)
-
-@asset
-def servicios_vs_renta(context, prompt_servicios_vs_renta, data_servicios_vs_renta):
-    code = get_ai_code(context, prompt_servicios_vs_renta)
-    path = render_ia_viz(context, code, data_servicios_vs_renta, "plots/actividad/bubble_servicios_vs_renta.png")
-    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
-
-
-# 4. Diverging Bar — brecha de género (ángulo D)
-@asset
-def prompt_brecha_genero(data_brecha_genero):
-    desc = """
-    - Dataset: data_brecha_genero
-    - Columnas: municipio (str), pct_mujeres (float, %), desviacion (float, pct_mujeres - 50)
-    - Geometría: diverging bar horizontal.
-      Crear columna 'color_grupo' = 'Mayoría mujeres' si desviacion >= 0, 'Mayoría hombres' si < 0.
-      geom_col(aes(x='desviacion', y='reorder(municipio, desviacion)', fill='color_grupo')) +
-      geom_vline(xintercept=0, color='black', size=0.6).
-    - Usar scale_fill_manual con dos colores distintos (ej. '#d73027' y '#4575b4').
-    - Título: '¿Dónde trabajan más mujeres en empleos elementales? (2023)'
-    - Eje X: 'Desviación respecto a paridad (puntos porcentuales)'. Eje Y: ''.
-    - Leyenda título: 'Predominio'. Tema: theme_minimal().
-    """
-    return get_ai_template(None, desc, data_brecha_genero)
-
-@asset
-def brecha_genero(context, prompt_brecha_genero, data_brecha_genero):
-    code = get_ai_code(context, prompt_brecha_genero)
-    path = render_ia_viz(context, code, data_brecha_genero, "plots/genero/diverging_bar_brecha_genero.png")
-    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
+# 3. Waterfall — composición de fuentes de ingresos (ángulo B)
 
 
 # 5. Waterfall — composición de fuentes de ingresos (ángulo B)
@@ -539,36 +392,6 @@ def piramide_ocupacion(context, prompt_piramide_ocupacion, data_piramide_ocupaci
     return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
 
 
-# 7. Marimekko — composición sectorial por grupo de renta
-@asset
-def prompt_marimekko_sectores(data_marimekko_sectores):
-    desc = """
-    - Dataset: data_marimekko_sectores
-    - Columnas: grupo_renta (str), sector (str), pct (float), xmin, xmax, ymin, ymax (float),
-      xcenter, ycenter (float), total_grupo (int)
-    - Geometría: Marimekko con geom_rect.
-      geom_rect(aes(xmin='xmin', xmax='xmax', ymin='ymin', ymax='ymax', fill='sector'),
-                color='white', size=0.5).
-    - Añadir etiquetas de grupo_renta en el eje X:
-        geom_text(data=df.drop_duplicates('grupo_renta'),
-                  aes(x='xcenter', y=-0.05, label='grupo_renta'), size=8, va='top').
-    - Añadir etiquetas de porcentaje dentro de cada celda (solo si pct > 0.07):
-        geom_text(data=df[df['pct'] > 0.07],
-                  aes(x='xcenter', y='ycenter', label='pct_label'), size=7, color='white').
-        Calcular pct_label = df['pct'].apply(lambda x: f'{x*100:.0f}%').
-    - Usar scale_fill_brewer(type='qual', palette='Set2').
-    - scale_y_continuous(labels=lambda l: [f'{v*100:.0f}%' for v in l]).
-    - Título: 'Composición del empleo por sector según nivel de renta (2023)'
-    - Eje X: 'Grupo de renta (ancho proporcional a trabajadores)'. Eje Y: '% de trabajadores por sector'.
-    - Tema: theme_minimal() + theme(axis_text_x=element_blank(), axis_ticks_x=element_blank()).
-    """
-    return get_ai_template(None, desc, data_marimekko_sectores)
-
-@asset
-def marimekko_sectores(context, prompt_marimekko_sectores, data_marimekko_sectores):
-    code = get_ai_code(context, prompt_marimekko_sectores)
-    path = render_ia_viz(context, code, data_marimekko_sectores, "plots/actividad/marimekko_sectores.png")
-    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
 
 
 # 8. Waterfall — distribución de trabajadores por sector CNAE
@@ -707,27 +530,30 @@ def data_boxplot_intramunicipal(rentamedia_clean):
     return df[['isla', 'municipio', 'renta_neta']]
 
 @asset
-def prompt_boxplot_intramunicipal(data_boxplot_intramunicipal):
-    desc = """
-    - Dataset: data_boxplot_intramunicipal
-    - Columnas: isla (str, 4 islas), municipio (str), renta_neta (float, €)
-    - Preprocesamiento: ordenar islas por mediana de renta_neta ascendente con pd.Categorical.
-    - Geometría: box plot horizontal, un box por isla.
-      aes(x='isla', y='renta_neta') + geom_boxplot(...) + coord_flip()
-      geom_boxplot(fill='#4575b4', alpha=0.7, outlier_size=1.2, color='#2c5282')
-    - NUNCA usar guide=False ni guide='none'. Para ocultar leyendas usar theme(legend_position='none').
-    - Título: 'Distribución de renta por sección censal según isla (2023)'
-    - Eje X (tras coord_flip): ''. Eje Y: 'Renta neta media por hogar (€)'.
-    - Tema: theme_minimal() + theme(legend_position='none', figure_size=(10, 5)).
-    """
-    return get_ai_template(None, desc, data_boxplot_intramunicipal)
+def boxplot_intramunicipal(context, data_boxplot_intramunicipal):
+    """Genera un PNG por isla con boxplot de renta por municipio."""
+    script_path = os.path.join(SOURCES_DIR, "boxplot_intramunicipal.py")
+    with open(script_path) as f:
+        code = f.read()
 
-@asset
-def boxplot_intramunicipal(context, prompt_boxplot_intramunicipal, data_boxplot_intramunicipal):
-    code = get_ai_code(context, prompt_boxplot_intramunicipal)
-    path = render_ia_viz(context, code, data_boxplot_intramunicipal,
-                         "plots/renta/boxplot_desigualdad_intramunicipal.png", height=10)
-    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
+    islas = [
+        ('Tenerife',  'tenerife'),
+        ('La Palma',  'la_palma'),
+        ('La Gomera', 'la_gomera'),
+        ('El Hierro', 'el_hierro'),
+    ]
+    paths = []
+    for isla, slug in islas:
+        df_isla = data_boxplot_intramunicipal[
+            data_boxplot_intramunicipal['isla'] == isla
+        ].copy()
+        n_mun = df_isla['municipio'].nunique()
+        height = max(4, n_mun * 0.35)
+        path = f"plots/renta/boxplot_desigualdad_intramunicipal_{slug}.png"
+        render_ia_viz(context, code, df_isla, path, width=10, height=height)
+        paths.append(path)
+
+    return Output(paths[0], metadata={"paths": MetadataValue.text(str(paths))})
 
 
 # 11. Scatter — ocupaciones elementales vs renta
@@ -779,10 +605,10 @@ def scatter_elementales(context, prompt_scatter_elementales, data_scatter_elemen
     return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
 
 
-# 12. Grouped bar — fuentes de ingreso por quintil de renta
+# 12. Grouped bar — actividad económica por quintil de renta
 @asset
-def data_ingresos_quintiles(ingresos_clean, rentamedia_clean):
-    """% medio de cada fuente de ingresos por quintil de renta (2023). Para grouped bar."""
+def data_ingresos_quintiles(actividad_clean, rentamedia_clean):
+    """% de trabajadores por sector de actividad y quintil de renta (2023). Para grouped bar."""
     renta_sec = (
         rentamedia_clean[
             (rentamedia_clean['año'] == 2023) &
@@ -795,25 +621,32 @@ def data_ingresos_quintiles(ingresos_clean, rentamedia_clean):
         renta_sec['OBS_VALUE'], q=5,
         labels=['Q1 (más pobre)', 'Q2', 'Q3', 'Q4', 'Q5 (más rico)']
     )
-    ing = ingresos_clean[ingresos_clean['año'] == 2023]
-    merged = ing.merge(renta_sec[['geo_key', 'quintil']], on='geo_key', how='inner')
-    return (
-        merged.groupby(['quintil', 'MEDIDAS#es'], as_index=False)['OBS_VALUE']
-        .mean()
-        .rename(columns={'MEDIDAS#es': 'fuente', 'OBS_VALUE': 'pct'})
+    act = actividad_clean[
+        (actividad_clean['Periodo'] == 2023) &
+        (actividad_clean['Actividad económica'] != 'No consta')
+    ]
+    merged = act.merge(renta_sec[['geo_key', 'quintil']], on='geo_key', how='inner')
+    result = (
+        merged.groupby(['quintil', 'Actividad económica'], as_index=False)
+        ['num_casos'].sum()
+        .rename(columns={'Actividad económica': 'actividad'})
     )
+    result['pct'] = result.groupby('quintil')['num_casos'].transform(
+        lambda x: x / x.sum() * 100
+    )
+    return result[['quintil', 'actividad', 'pct']]
 
 @asset
 def prompt_ingresos_quintiles(data_ingresos_quintiles):
     desc = """
     - Dataset: data_ingresos_quintiles
-    - Columnas: quintil (str, 5 niveles de Q1 más pobre a Q5 más rico), fuente (str), pct (float, %)
+    - Columnas: quintil (str, 5 niveles Q1 más pobre → Q5 más rico), actividad (str, 4 sectores), pct (float, %)
     - Geometría: grouped bar.
-      geom_col(aes(x='quintil', y='pct', fill='fuente'), position='dodge')
+      geom_col(aes(x='quintil', y='pct', fill='actividad'), position='dodge')
     - Rotar etiquetas eje X 15°: theme(axis_text_x=element_text(angle=15, ha='right'))
     - NUNCA usar guide=False ni guide='none'. Para ocultar leyendas usar theme(legend_position='none').
-    - Título: '¿De qué viven los más ricos y los más pobres? Fuentes de ingreso por quintil (2023)'
-    - Eje X: 'Quintil de renta'. Eje Y: '% medio de ingresos'. Fill legend: 'Fuente'.
+    - Título: '¿En qué trabajan los más ricos y los más pobres? Actividad por quintil de renta (2023)'
+    - Eje X: 'Quintil de renta'. Eje Y: '% de trabajadores'. Fill legend: 'Sector'.
     - Tema: theme_minimal().
     """
     return get_ai_template(None, desc, data_ingresos_quintiles)
@@ -826,7 +659,60 @@ def grouped_bar_quintiles(context, prompt_ingresos_quintiles, data_ingresos_quin
     return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
 
 
-# 13. Heatmap — renta por municipio y año
+
+# 13. Grouped bar — ocupación por quintil de renta
+@asset
+def data_ocupacion_quintiles(ocupacion_clean, rentamedia_clean):
+    """% de trabajadores por categoría de ocupación y quintil de renta (2023). Para grouped bar."""
+    renta_sec = (
+        rentamedia_clean[
+            (rentamedia_clean['año'] == 2023) &
+            (rentamedia_clean['MEDIDAS_CODE'] == 'RENTA_NETA_MEDIA_HOGAR')
+        ][['geo_key', 'OBS_VALUE']]
+        .drop_duplicates('geo_key')
+        .copy()
+    )
+    renta_sec['quintil'] = pd.qcut(
+        renta_sec['OBS_VALUE'], q=5,
+        labels=['Q1 (más pobre)', 'Q2', 'Q3', 'Q4', 'Q5 (más rico)']
+    )
+    ocu = ocupacion_clean[
+        (ocupacion_clean['año'] == 2023) &
+        (ocupacion_clean['ocupacion'] != 'No consta')
+    ]
+    merged = ocu.merge(renta_sec[['geo_key', 'quintil']], on='geo_key', how='inner')
+    result = (
+        merged.groupby(['quintil', 'ocupacion'], as_index=False)['num_casos'].sum()
+    )
+    result['pct'] = result.groupby('quintil')['num_casos'].transform(
+        lambda x: x / x.sum() * 100
+    )
+    return result[['quintil', 'ocupacion', 'pct']]
+
+@asset
+def prompt_ocupacion_quintiles(data_ocupacion_quintiles):
+    desc = """
+    - Dataset: data_ocupacion_quintiles
+    - Columnas: quintil (str, 5 niveles Q1 más pobre → Q5 más rico), ocupacion (str, 3 categorías), pct (float, %)
+    - Geometría: grouped bar.
+      geom_col(aes(x='quintil', y='pct', fill='ocupacion'), position='dodge')
+    - Rotar etiquetas eje X 15°: theme(axis_text_x=element_text(angle=15, ha='right'))
+    - NUNCA usar guide=False ni guide='none'. Para ocultar leyendas usar theme(legend_position='none').
+    - Título: '¿Qué ocupación tienen los más ricos y los más pobres? Por quintil de renta (2023)'
+    - Eje X: 'Quintil de renta'. Eje Y: '% de trabajadores'. Fill legend: 'Ocupación'.
+    - Tema: theme_minimal().
+    """
+    return get_ai_template(None, desc, data_ocupacion_quintiles)
+
+@asset
+def grouped_bar_ocupacion(context, prompt_ocupacion_quintiles, data_ocupacion_quintiles):
+    code = get_ai_code(context, prompt_ocupacion_quintiles)
+    path = render_ia_viz(context, code, data_ocupacion_quintiles,
+                         "plots/renta/grouped_bar_ocupacion_quintiles.png", width=12)
+    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
+
+
+# 14. Heatmap — renta por municipio y año
 @asset
 def data_heatmap_renta(rentamedia_clean):
     """Renta media por municipio y año (2021-2023), municipios con los 3 años. Para heatmap."""

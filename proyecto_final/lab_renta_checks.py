@@ -7,17 +7,15 @@ from lab_renta import (
     ocupacion_load, ocupacion_clean,
     ingresos_load, ingresos_clean,
     data_renta_municipio, data_hist_renta,
-    data_servicios_vs_renta, data_brecha_genero,
-    data_fuentes_ingresos, data_piramide_ocupacion, data_marimekko_sectores,
+    data_fuentes_ingresos, data_piramide_ocupacion,
     data_waterfall_actividades,
     data_slope_brecha, data_boxplot_intramunicipal,
-    data_scatter_elementales, data_ingresos_quintiles, data_heatmap_renta,
+    data_scatter_elementales, data_ingresos_quintiles, data_ocupacion_quintiles, data_heatmap_renta,
     ranking_municipios, hist_renta,
-    servicios_vs_renta, brecha_genero,
-    fuentes_ingresos, piramide_ocupacion, marimekko_sectores,
+    fuentes_ingresos, piramide_ocupacion,
     waterfall_actividades,
     slope_brecha, boxplot_intramunicipal,
-    scatter_elementales, grouped_bar_quintiles, heatmap_renta,
+    scatter_elementales, grouped_bar_quintiles, grouped_bar_ocupacion, heatmap_renta,
 )
 
 
@@ -172,33 +170,6 @@ def test_hist_dispersion(data_hist_renta):
         }
     )
 
-@asset_check(asset=data_servicios_vs_renta)
-def test_join_servicios_renta(data_servicios_vs_renta):
-    n = len(data_servicios_vs_renta)
-    return AssetCheckResult(
-        passed=bool(n >= 400),
-        metadata={
-            "secciones_cruzadas": MetadataValue.int(n),
-            "description": "El join secciones-renta debe producir al menos 400 filas.",
-            "gestalt": "Continuidad",
-        }
-    )
-
-@asset_check(asset=data_brecha_genero)
-def test_brecha_existe(data_brecha_genero):
-    medias_negativas = (data_brecha_genero['desviacion'] < 0).sum()
-    medias_positivas = (data_brecha_genero['desviacion'] > 0).sum()
-    passed = bool(medias_negativas > 0 and medias_positivas > 0)
-    return AssetCheckResult(
-        passed=passed,
-        metadata={
-            "municipios_mayoria_hombres": MetadataValue.int(int(medias_negativas)),
-            "municipios_mayoria_mujeres": MetadataValue.int(int(medias_positivas)),
-            "description": "El diverging bar necesita valores a ambos lados de la paridad.",
-            "gestalt": "Destino Común",
-        }
-    )
-
 @asset_check(asset=data_fuentes_ingresos)
 def test_waterfall_suma_100(data_fuentes_ingresos):
     total = data_fuentes_ingresos['pct'].sum()
@@ -212,30 +183,18 @@ def test_waterfall_suma_100(data_fuentes_ingresos):
     )
 
 @asset_check(asset=data_piramide_ocupacion)
-def test_piramide_simetria(data_piramide_ocupacion):
-    total_h = data_piramide_ocupacion.loc[data_piramide_ocupacion['sexo'] == 'Hombres', 'num_casos'].sum()
-    total_m = data_piramide_ocupacion.loc[data_piramide_ocupacion['sexo'] == 'Mujeres', 'num_casos'].sum()
-    ratio   = max(total_h, total_m) / min(total_h, total_m)
-    passed  = bool(ratio < 2.0)
+def test_piramide_categorias(data_piramide_ocupacion):
+    n = len(data_piramide_ocupacion)
+    tiene_desviacion = 'desviacion' in data_piramide_ocupacion.columns
     return AssetCheckResult(
-        passed=passed,
+        passed=bool(n >= 2 and tiene_desviacion),
         metadata={
-            "ratio_h_m": MetadataValue.float(float(ratio)),
-            "description": "La pirámide no debe estar desequilibrada > 2× entre sexos.",
-            "gestalt": "Simetría",
+            "n_categorias": MetadataValue.int(n),
+            "description": "Diverging bar necesita ≥2 categorías y columna desviacion.",
+            "gestalt": "Destino Común",
         }
     )
 
-@asset_check(asset=data_marimekko_sectores)
-def test_marimekko_grupos(data_marimekko_sectores):
-    n_grupos = data_marimekko_sectores['grupo_renta'].nunique()
-    return AssetCheckResult(
-        passed=bool(n_grupos == 3),
-        metadata={
-            "n_grupos": MetadataValue.int(n_grupos),
-            "description": "El Marimekko debe tener exactamente 3 grupos de renta.",
-        }
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -250,14 +209,6 @@ def test_archivo_ranking(ranking_municipios):
 def test_archivo_hist(hist_renta):
     return _check_file(hist_renta, "Histograma de distribución generado.", "Proximidad")
 
-@asset_check(asset=servicios_vs_renta)
-def test_archivo_servicios(servicios_vs_renta):
-    return _check_file(servicios_vs_renta, "Bubble chart servicios vs renta generado.", "Continuidad")
-
-@asset_check(asset=brecha_genero)
-def test_archivo_brecha(brecha_genero):
-    return _check_file(brecha_genero, "Diverging bar de brecha de género generado.", "Semejanza")
-
 @asset_check(asset=fuentes_ingresos)
 def test_archivo_fuentes(fuentes_ingresos):
     return _check_file(fuentes_ingresos, "Waterfall de fuentes de ingresos generado.", "Continuidad")
@@ -266,9 +217,6 @@ def test_archivo_fuentes(fuentes_ingresos):
 def test_archivo_piramide(piramide_ocupacion):
     return _check_file(piramide_ocupacion, "Pirámide de ocupación generada.", "Simetría")
 
-@asset_check(asset=marimekko_sectores)
-def test_archivo_marimekko(marimekko_sectores):
-    return _check_file(marimekko_sectores, "Marimekko de sectores generado.", "Proximidad")
 
 @asset_check(asset=data_waterfall_actividades)
 def test_waterfall_actividades_suma_100(data_waterfall_actividades):
@@ -330,16 +278,33 @@ def test_scatter_correlacion_negativa(data_scatter_elementales):
 
 @asset_check(asset=data_ingresos_quintiles)
 def test_quintiles_completos(data_ingresos_quintiles):
-    n_quintiles = data_ingresos_quintiles['quintil'].nunique()
-    n_fuentes   = data_ingresos_quintiles['fuente'].nunique()
+    n_quintiles  = data_ingresos_quintiles['quintil'].nunique()
+    n_actividades = data_ingresos_quintiles['actividad'].nunique()
     return AssetCheckResult(
-        passed=bool(n_quintiles == 5 and n_fuentes >= 4),
+        passed=bool(n_quintiles == 5 and n_actividades >= 3),
         metadata={
-            "n_quintiles": MetadataValue.int(n_quintiles),
-            "n_fuentes":   MetadataValue.int(n_fuentes),
-            "description": "Grouped bar necesita 5 quintiles y ≥4 fuentes de ingreso.",
+            "n_quintiles":   MetadataValue.int(n_quintiles),
+            "n_actividades": MetadataValue.int(n_actividades),
+            "description":   "Grouped bar necesita 5 quintiles y ≥3 sectores de actividad.",
         }
     )
+
+@asset_check(asset=data_ocupacion_quintiles)
+def test_ocupacion_quintiles_completos(data_ocupacion_quintiles):
+    n_quintiles  = data_ocupacion_quintiles['quintil'].nunique()
+    n_ocupaciones = data_ocupacion_quintiles['ocupacion'].nunique()
+    return AssetCheckResult(
+        passed=bool(n_quintiles == 5 and n_ocupaciones >= 2),
+        metadata={
+            "n_quintiles":   MetadataValue.int(n_quintiles),
+            "n_ocupaciones": MetadataValue.int(n_ocupaciones),
+            "description":   "Grouped bar ocupación necesita 5 quintiles y ≥2 categorías.",
+        }
+    )
+
+@asset_check(asset=grouped_bar_ocupacion)
+def test_archivo_grouped_bar_ocupacion(grouped_bar_ocupacion):
+    return _check_file(grouped_bar_ocupacion, "Grouped bar ocupación por quintil generado.", "Magnitud")
 
 @asset_check(asset=data_heatmap_renta)
 def test_heatmap_tres_anios(data_heatmap_renta):
