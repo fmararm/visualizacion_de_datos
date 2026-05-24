@@ -116,6 +116,35 @@ dagster asset materialize -f definitions.py --select "interactive_secciones_map"
 
 ---
 
+## Mapa interactivo de secciones
+
+El mapa coroplético de Tenerife se genera con Folium al materializar el asset `interactive_secciones_map`.
+
+### Ver en GitHub Pages (recomendado)
+
+El mapa publicado está en:
+
+**[https://fmararm.github.io/visualizacion_de_datos/index_map.html](https://fmararm.github.io/visualizacion_de_datos/index_map.html)**
+
+> Para activar GitHub Pages por primera vez: en el repositorio ve a **Settings → Pages**, selecciona rama `main` y carpeta `/docs`, y guarda.
+
+### Ver en local tras materializar
+
+Al materializar el asset `interactive_secciones_map`, Dagster levanta automáticamente un servidor HTTP en el puerto 8050. El mapa queda accesible en:
+
+**[http://127.0.0.1:8050/secciones_map.html](http://127.0.0.1:8050/secciones_map.html)**
+
+También puedes abrir directamente el archivo generado sin servidor:
+
+```bash
+# Desde la raíz del repositorio
+open docs/index_map.html          # macOS
+xdg-open docs/index_map.html      # Linux
+start docs/index_map.html         # Windows
+```
+
+---
+
 ## Pipeline de assets
 
 ```

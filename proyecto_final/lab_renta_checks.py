@@ -9,9 +9,15 @@ from lab_renta import (
     data_renta_municipio, data_hist_renta,
     data_servicios_vs_renta, data_brecha_genero,
     data_fuentes_ingresos, data_piramide_ocupacion, data_marimekko_sectores,
+    data_waterfall_actividades,
+    data_slope_brecha, data_boxplot_intramunicipal,
+    data_scatter_elementales, data_ingresos_quintiles, data_heatmap_renta,
     ranking_municipios, hist_renta,
     servicios_vs_renta, brecha_genero,
     fuentes_ingresos, piramide_ocupacion, marimekko_sectores,
+    waterfall_actividades,
+    slope_brecha, boxplot_intramunicipal,
+    scatter_elementales, grouped_bar_quintiles, heatmap_renta,
 )
 
 
@@ -263,3 +269,107 @@ def test_archivo_piramide(piramide_ocupacion):
 @asset_check(asset=marimekko_sectores)
 def test_archivo_marimekko(marimekko_sectores):
     return _check_file(marimekko_sectores, "Marimekko de sectores generado.", "Proximidad")
+
+@asset_check(asset=data_waterfall_actividades)
+def test_waterfall_actividades_suma_100(data_waterfall_actividades):
+    total = data_waterfall_actividades['pct'].sum()
+    return AssetCheckResult(
+        passed=bool(abs(total - 100) < 1),
+        metadata={
+            "suma_pct": MetadataValue.float(float(total)),
+            "description": "Los 4 sectores CNAE deben sumar ~100%.",
+        }
+    )
+
+@asset_check(asset=waterfall_actividades)
+def test_archivo_waterfall_actividades(waterfall_actividades):
+    return _check_file(waterfall_actividades, "Waterfall de sectores de actividad generado.", "Parte-Todo")
+
+
+# ---------------------------------------------------------------------------
+# Checks — gráficos de correlación (desigualdad)
+# ---------------------------------------------------------------------------
+
+@asset_check(asset=data_slope_brecha)
+def test_slope_dos_anios(data_slope_brecha):
+    tiene_2021 = 'renta_2021' in data_slope_brecha.columns
+    tiene_2023 = 'renta_2023' in data_slope_brecha.columns
+    n = len(data_slope_brecha)
+    return AssetCheckResult(
+        passed=bool(tiene_2021 and tiene_2023 and n >= 40),
+        metadata={
+            "n_municipios": MetadataValue.int(n),
+            "description": "Slope chart necesita renta_2021, renta_2023 y ≥40 municipios.",
+        }
+    )
+
+@asset_check(asset=data_boxplot_intramunicipal)
+def test_boxplot_cobertura(data_boxplot_intramunicipal):
+    n_mun = data_boxplot_intramunicipal['municipio'].nunique()
+    n_sec = len(data_boxplot_intramunicipal)
+    return AssetCheckResult(
+        passed=bool(n_mun >= 40 and n_sec >= 200),
+        metadata={
+            "n_municipios": MetadataValue.int(n_mun),
+            "n_secciones":  MetadataValue.int(n_sec),
+            "description":  "Box plot necesita ≥40 municipios y ≥200 secciones censales.",
+        }
+    )
+
+@asset_check(asset=data_scatter_elementales)
+def test_scatter_correlacion_negativa(data_scatter_elementales):
+    corr = data_scatter_elementales[['pct_elementales', 'renta_neta']].corr().iloc[0, 1]
+    return AssetCheckResult(
+        passed=bool(corr < -0.1),
+        metadata={
+            "correlacion": MetadataValue.float(float(corr)),
+            "description": "Se espera correlación negativa entre % elementales y renta.",
+            "gestalt": "Destino Común",
+        }
+    )
+
+@asset_check(asset=data_ingresos_quintiles)
+def test_quintiles_completos(data_ingresos_quintiles):
+    n_quintiles = data_ingresos_quintiles['quintil'].nunique()
+    n_fuentes   = data_ingresos_quintiles['fuente'].nunique()
+    return AssetCheckResult(
+        passed=bool(n_quintiles == 5 and n_fuentes >= 4),
+        metadata={
+            "n_quintiles": MetadataValue.int(n_quintiles),
+            "n_fuentes":   MetadataValue.int(n_fuentes),
+            "description": "Grouped bar necesita 5 quintiles y ≥4 fuentes de ingreso.",
+        }
+    )
+
+@asset_check(asset=data_heatmap_renta)
+def test_heatmap_tres_anios(data_heatmap_renta):
+    años = sorted(data_heatmap_renta['año'].unique())
+    n_mun = data_heatmap_renta['municipio'].nunique()
+    return AssetCheckResult(
+        passed=bool(set(años) >= {2021, 2022, 2023} and n_mun >= 40),
+        metadata={
+            "años":        MetadataValue.text(str(años)),
+            "n_municipios": MetadataValue.int(n_mun),
+            "description": "Heatmap necesita los 3 años y ≥40 municipios.",
+        }
+    )
+
+@asset_check(asset=slope_brecha)
+def test_archivo_slope(slope_brecha):
+    return _check_file(slope_brecha, "Slope chart de evolución de renta generado.", "Cambio Temporal")
+
+@asset_check(asset=boxplot_intramunicipal)
+def test_archivo_boxplot(boxplot_intramunicipal):
+    return _check_file(boxplot_intramunicipal, "Box plot de desigualdad intramunicipal generado.", "Distribución")
+
+@asset_check(asset=scatter_elementales)
+def test_archivo_scatter(scatter_elementales):
+    return _check_file(scatter_elementales, "Scatter elementales vs renta generado.", "Correlación")
+
+@asset_check(asset=grouped_bar_quintiles)
+def test_archivo_grouped_bar(grouped_bar_quintiles):
+    return _check_file(grouped_bar_quintiles, "Grouped bar fuentes por quintil generado.", "Magnitud")
+
+@asset_check(asset=heatmap_renta)
+def test_archivo_heatmap(heatmap_renta):
+    return _check_file(heatmap_renta, "Heatmap de renta por municipio y año generado.", "Cambio Temporal")

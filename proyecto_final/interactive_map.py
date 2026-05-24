@@ -8,7 +8,7 @@ from branca.element import Element
 
 GEOJSON_PATH = "data/cartografia-secciones/secciones_20240101_tenerife.json"
 OUTPUT_HTML  = "plots/secciones_map.html"
-DOCS_HTML    = "docs/index_map.html"
+DOCS_HTML    = "../docs/index_map.html"
 
 
 def _strip_prefix(code):
@@ -17,7 +17,7 @@ def _strip_prefix(code):
     return m.group(1) if m else str(code)
 
 
-def _build_layer(m, geo, name, data_map, colors, tooltip_alias):
+def _build_layer(m, geo, name, data_map, colors, tooltip_alias, value_field):
     vals = [v for v in data_map.values() if pd.notna(v)]
     if not vals:
         return None
@@ -36,7 +36,7 @@ def _build_layer(m, geo, name, data_map, colors, tooltip_alias):
             "fillOpacity": 0.78,
         },
         tooltip=folium.GeoJsonTooltip(
-            fields=["etiqueta", "_valor"],
+            fields=["etiqueta", value_field],
             aliases=["Sección:", tooltip_alias],
             localize=True,
             sticky=True,
@@ -121,15 +121,16 @@ def interactive_secciones_map(context):
 
     cmaps = []
     layer_names = []
-    for name, data_map, colors, alias, fmt in layers:
-        # Inyectar valor formateado para el tooltip de cada capa
+    for i, (name, data_map, colors, alias, fmt) in enumerate(layers):
+        # Campo único por capa para evitar que se sobreescriba el tooltip
+        value_field = f"_val_{i}"
         for feat in geo["features"]:
             key = feat["properties"]["_key"]
             val = data_map.get(key)
-            feat["properties"]["_valor"] = (
+            feat["properties"][value_field] = (
                 f"{val:{fmt}}" if val is not None and pd.notna(val) else "—"
             )
-        cmap = _build_layer(m, geo, name, data_map, colors, alias)
+        cmap = _build_layer(m, geo, name, data_map, colors, alias, value_field)
         if cmap:
             cmaps.append(cmap)
             layer_names.append(name)

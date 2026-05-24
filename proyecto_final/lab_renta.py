@@ -6,7 +6,7 @@ from dagster import asset, Output, MetadataValue
 
 CLAUDE_BIN = "/home/francisco/.vscode-server/extensions/anthropic.claude-code-2.1.145-linux-x64/resources/native-binary/claude"
 
-SOURCES_DIR = "sources"
+SOURCES_DIR = "scripts"
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +104,7 @@ def get_ai_code(context, template):
     return codigo
 
 
-def render_ia_viz(context, code, df, filename):
+def render_ia_viz(context, code, df, filename, width=10, height=6):
     if not code or "def generar_plot" not in code:
         match = re.search(r"def generar_plot.*return plot", code, re.DOTALL)
         if match:
@@ -119,7 +119,7 @@ def render_ia_viz(context, code, df, filename):
         exec(code, env)
         plot = env['generar_plot'](df)
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-        plot.save(filename, width=10, height=6, dpi=100)
+        plot.save(filename, width=width, height=height, dpi=100)
 
         docs_img_path = os.path.join("docs", "images", os.path.basename(filename))
         os.makedirs(os.path.dirname(docs_img_path), exist_ok=True)
@@ -292,16 +292,13 @@ def data_fuentes_ingresos(ingresos_clean):
     % medio de cada fuente de ingresos en Tenerife (2023), con posiciones para waterfall.
     Columnas extra: inicio, fin (acumulados para geom_rect).
     """
-    ORDEN = ['Sueldos y salarios', 'Pensiones', 'Prestaciones por desempleo',
-             'Otras prestaciones', 'Otros ingresos']
     df = (
         ingresos_clean[ingresos_clean['año'] == 2023]
         .groupby('MEDIDAS#es', as_index=False)['OBS_VALUE']
         .mean()
         .rename(columns={'MEDIDAS#es': 'fuente', 'OBS_VALUE': 'pct'})
     )
-    df['fuente'] = pd.Categorical(df['fuente'], categories=ORDEN, ordered=True)
-    df = df.sort_values('fuente').reset_index(drop=True)
+    df = df.sort_values('pct', ascending=False).reset_index(drop=True)
     df['inicio'] = df['pct'].cumsum().shift(1).fillna(0)
     df['fin']    = df['pct'].cumsum()
     df['idx']    = range(len(df))
@@ -311,22 +308,23 @@ def data_fuentes_ingresos(ingresos_clean):
 @asset
 def data_piramide_ocupacion(ocupacion_clean):
     """
-    Trabajadores por municipio y sexo en Tenerife (2023), top 25 municipios por total.
-    Hombres con valor negativo para pirámide horizontal.
+    Desviación porcentual respecto a la paridad (50/50) por categoría de ocupación, 2023.
+    desviacion = pct_mujeres - 50  (positivo → más mujeres, negativo → más hombres)
     """
     df = (
-        ocupacion_clean[ocupacion_clean['año'] == 2023]
-        .groupby(['municipio', 'sexo'], as_index=False)['num_casos'].sum()
+        ocupacion_clean[
+            (ocupacion_clean['año'] == 2023) &
+            (ocupacion_clean['ocupacion'] != 'No consta')
+        ]
+        .groupby(['ocupacion', 'sexo'], as_index=False)['num_casos'].sum()
     )
-    top25 = (
-        df.groupby('municipio')['num_casos'].sum()
-        .nlargest(25).index
+    pivot = df.pivot(index='ocupacion', columns='sexo', values='num_casos').reset_index()
+    pivot['total'] = pivot['Hombres'] + pivot['Mujeres']
+    pivot['desviacion'] = (pivot['Mujeres'] / pivot['total'] * 100) - 50
+    pivot['mayoria'] = pivot['desviacion'].apply(
+        lambda v: 'Más mujeres' if v > 0 else 'Más hombres'
     )
-    df = df[df['municipio'].isin(top25)].copy()
-    df['num_casos_dir'] = df.apply(
-        lambda r: -r['num_casos'] if r['sexo'] == 'Hombres' else r['num_casos'], axis=1
-    )
-    return df
+    return pivot[['ocupacion', 'desviacion', 'mayoria', 'total']]
 
 
 @asset
@@ -517,19 +515,20 @@ def fuentes_ingresos(context, prompt_fuentes_ingresos, data_fuentes_ingresos):
 def prompt_piramide_ocupacion(data_piramide_ocupacion):
     desc = """
     - Dataset: data_piramide_ocupacion
-    - Columnas: municipio (str, 25 municipios), sexo ('Hombres'/'Mujeres'),
-      num_casos (int), num_casos_dir (int, negativo para Hombres)
-    - Geometría: pirámide de población horizontal.
-      geom_col(aes(x='num_casos_dir', y='reorder(municipio, num_casos)', fill='sexo'),
-               width=0.7, position='identity') +
-      geom_vline(xintercept=0, color='black', size=0.5).
-    - CRÍTICO: usar position='identity' en geom_col para que las barras no se apilen.
-    - Usar scale_x_continuous con labels que muestren valor absoluto:
-        labels=lambda lst: [f'{abs(int(v)):,}' for v in lst]
-    - Usar scale_fill_manual con '#4575b4' para Hombres y '#d73027' para Mujeres.
-    - Título: 'Distribución de trabajadores por sexo y municipio en Tenerife (2023)'
-    - Eje X: 'Número de trabajadores'. Eje Y: ''.
-    - Leyenda título: 'Sexo'. Tema: theme_minimal().
+    - Columnas: ocupacion (str, 3 categorías), desviacion (float, % mujeres − 50%),
+      mayoria ('Más mujeres' / 'Más hombres'), total (float)
+    - Geometría: diverging bar horizontal.
+        aes(x='ocupacion', y='desviacion', fill='mayoria')
+        + geom_col(width=0.6)
+        + coord_flip()
+        + geom_hline(yintercept=0, color='black', size=0.7)
+    - Ordenar categorías por desviacion ascendente con pd.Categorical antes del plot.
+    - scale_fill_manual: '#d73027' para 'Más mujeres', '#4575b4' para 'Más hombres'.
+    - scale_y_continuous con labels con signo y un decimal:
+        labels=lambda lst: [f'{v:+.1f}%' for v in lst]
+    - Título: 'Brecha de género por categoría de ocupación en Tenerife (2023)'
+    - Eje Y: 'Desviación respecto a la paridad (% mujeres − 50%)'. Eje X: ''. Leyenda: ''.
+    - theme_minimal() + theme(figure_size=(10, 5), axis_text_y=element_text(size=8))
     """
     return get_ai_template(None, desc, data_piramide_ocupacion)
 
@@ -569,4 +568,299 @@ def prompt_marimekko_sectores(data_marimekko_sectores):
 def marimekko_sectores(context, prompt_marimekko_sectores, data_marimekko_sectores):
     code = get_ai_code(context, prompt_marimekko_sectores)
     path = render_ia_viz(context, code, data_marimekko_sectores, "plots/actividad/marimekko_sectores.png")
+    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
+
+
+# 8. Waterfall — distribución de trabajadores por sector CNAE
+@asset
+def data_waterfall_actividades(actividad_clean):
+    """
+    % de trabajadores por sector CNAE en Tenerife (2023), con posiciones para waterfall.
+    Excluye 'No consta'. Ordenado de mayor a menor %.
+    """
+    df = (
+        actividad_clean[
+            (actividad_clean['Periodo'] == 2023) &
+            (actividad_clean['Actividad económica'] != 'No consta')
+        ]
+        .groupby('Actividad económica', as_index=False)['num_casos'].sum()
+        .rename(columns={'Actividad económica': 'sector', 'num_casos': 'total'})
+    )
+    total_global = df['total'].sum()
+    df['pct']    = df['total'] / total_global * 100
+    df = df.sort_values('pct', ascending=False).reset_index(drop=True)
+    df['inicio'] = df['pct'].cumsum().shift(1).fillna(0)
+    df['fin']    = df['pct'].cumsum()
+    df['idx']    = range(len(df))
+    return df
+
+
+@asset
+def prompt_waterfall_actividades(data_waterfall_actividades):
+    desc = """
+    - Dataset: data_waterfall_actividades
+    - Columnas: sector (str), total (int), pct (float), inicio (float), fin (float), idx (int)
+    - Geometría: waterfall con geom_rect.
+      geom_rect(aes(xmin='idx - 0.4', xmax='idx + 0.4', ymin='inicio', ymax='fin', fill='bar_color'))
+    - Colores de barra: BARRA_COLS = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']
+      asignados por posición (idx 0 → primer color).
+    - Colores de texto interior contrastantes (distintos entre sí):
+      TEXTO_COLS = ['#FFF9C4', '#1A237E', '#FCE4EC', '#E0F7FA']
+    - Conectores entre barras:
+      geom_segment(aes(x='idx+0.4', xend='idx+0.6', y='fin', yend='fin'), color='gray', linetype='dashed')
+    - Texto interior con pct formateado '{:.1f}%', size=11, fontweight='bold'.
+      Usar scale_color_identity() (NO guide=False ni guide='none').
+    - Etiquetas del eje X: geom_text(aes(x='idx', y=-8, label='sector', color='bar_color'),
+      angle=20, ha='right', va='top', size=9).
+    - Añadir expand_limits(y=-22) para que no se corten las etiquetas.
+    - scale_x_continuous(breaks=[], labels=[]).
+    - scale_fill_identity() (sin guide=).
+    - NUNCA usar guide=False ni guide='none'. Para ocultar leyendas usar theme(legend_position='none').
+    - Título: 'Distribución de trabajadores por sector económico en Tenerife (2023)'
+    - Eje X: ''. Eje Y: '% acumulado de trabajadores'.
+    - Tema: theme_minimal() + theme(legend_position='none', axis_text_x=element_blank(), axis_ticks_x=element_blank()).
+    """
+    return get_ai_template(None, desc, data_waterfall_actividades)
+
+@asset
+def waterfall_actividades(context, prompt_waterfall_actividades, data_waterfall_actividades):
+    code = get_ai_code(context, prompt_waterfall_actividades)
+    path = render_ia_viz(context, code, data_waterfall_actividades, "plots/actividad/waterfall_actividades.png")
+    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
+
+
+# ============================================================
+# Gráficos de correlación — narrativa desigualdad
+# ============================================================
+
+# 9. Slope chart — evolución renta municipal 2021→2023
+@asset
+def data_slope_brecha(rentamedia_clean):
+    """Renta media por municipio en 2021 y 2023 con dirección del cambio. Para slope chart."""
+    df = (
+        rentamedia_clean[
+            (rentamedia_clean['año'].isin([2021, 2023])) &
+            (rentamedia_clean['MEDIDAS_CODE'] == 'RENTA_NETA_MEDIA_HOGAR')
+        ]
+        .groupby(['municipio', 'año'], as_index=False)['OBS_VALUE'].mean()
+        .rename(columns={'OBS_VALUE': 'renta_media'})
+    )
+    pivot = df.pivot(index='municipio', columns='año', values='renta_media').dropna().reset_index()
+    pivot.columns.name = None
+    pivot = pivot.rename(columns={2021: 'renta_2021', 2023: 'renta_2023'})
+    pivot['cambio'] = (pivot['renta_2023'] >= pivot['renta_2021']).map({True: 'Sube', False: 'Baja'})
+    pivot['variacion_pct'] = (pivot['renta_2023'] - pivot['renta_2021']) / pivot['renta_2021'] * 100
+    return pivot.sort_values('renta_2023', ascending=False).reset_index(drop=True)
+
+@asset
+def prompt_slope_brecha(data_slope_brecha):
+    desc = """
+    - Dataset: data_slope_brecha
+    - Columnas: municipio (str), renta_2021 (float, €), renta_2023 (float, €),
+      cambio ('Sube'/'Baja'), variacion_pct (float, %)
+    - Geometría: slope chart (gráfico de pendientes).
+      geom_segment(aes(x=0, xend=1, y='renta_2021', yend='renta_2023', color='cambio'),
+                   size=0.7, alpha=0.6)
+      geom_point(aes(x=0, y='renta_2021', color='cambio'), size=2)
+      geom_point(aes(x=1, y='renta_2023', color='cambio'), size=2)
+    - scale_color_manual(values={'Sube': '#1a9850', 'Baja': '#d73027'})
+    - scale_x_continuous(breaks=[0, 1], labels=['2021', '2023'], limits=[-0.15, 1.15])
+    - NUNCA usar guide=False ni guide='none'. Para ocultar leyendas usar theme(legend_position='none').
+    - Título: '¿Quién mejoró y quién empeoró? Evolución de la renta por municipio (2021–2023)'
+    - Eje X: ''. Eje Y: 'Renta neta media por hogar (€)'. Color legend: 'Tendencia'.
+    - Tema: theme_minimal().
+    """
+    return get_ai_template(None, desc, data_slope_brecha)
+
+@asset
+def slope_brecha(context, prompt_slope_brecha, data_slope_brecha):
+    code = get_ai_code(context, prompt_slope_brecha)
+    path = render_ia_viz(context, code, data_slope_brecha, "plots/renta/slope_brecha_temporal.png")
+    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
+
+
+# 10. Box plot — desigualdad intra-municipal
+@asset
+def data_boxplot_intramunicipal(rentamedia_clean):
+    """Renta por sección censal agrupada por isla (2023). Para box plot comparativo."""
+    ISLA_MAP = {
+        38002: 'La Gomera', 38003: 'La Gomera', 38021: 'La Gomera',
+        38036: 'La Gomera', 38049: 'La Gomera', 38050: 'La Gomera',
+        38007: 'La Palma',  38008: 'La Palma',  38009: 'La Palma',
+        38014: 'La Palma',  38016: 'La Palma',  38024: 'La Palma',
+        38027: 'La Palma',  38029: 'La Palma',  38030: 'La Palma',
+        38033: 'La Palma',  38037: 'La Palma',  38045: 'La Palma',
+        38047: 'La Palma',  38053: 'La Palma',
+        38013: 'El Hierro', 38048: 'El Hierro', 38901: 'El Hierro',
+    }
+    df = (
+        rentamedia_clean[
+            (rentamedia_clean['año'] == 2023) &
+            (rentamedia_clean['MEDIDAS_CODE'] == 'RENTA_NETA_MEDIA_HOGAR')
+        ][['geo_key', 'municipio', 'OBS_VALUE']]
+        .rename(columns={'OBS_VALUE': 'renta_neta'})
+        .dropna()
+        .reset_index(drop=True)
+    )
+    df['cod_municipio'] = df['geo_key'].str[:5].astype(int)
+    df['isla'] = df['cod_municipio'].map(ISLA_MAP).fillna('Tenerife')
+    return df[['isla', 'municipio', 'renta_neta']]
+
+@asset
+def prompt_boxplot_intramunicipal(data_boxplot_intramunicipal):
+    desc = """
+    - Dataset: data_boxplot_intramunicipal
+    - Columnas: isla (str, 4 islas), municipio (str), renta_neta (float, €)
+    - Preprocesamiento: ordenar islas por mediana de renta_neta ascendente con pd.Categorical.
+    - Geometría: box plot horizontal, un box por isla.
+      aes(x='isla', y='renta_neta') + geom_boxplot(...) + coord_flip()
+      geom_boxplot(fill='#4575b4', alpha=0.7, outlier_size=1.2, color='#2c5282')
+    - NUNCA usar guide=False ni guide='none'. Para ocultar leyendas usar theme(legend_position='none').
+    - Título: 'Distribución de renta por sección censal según isla (2023)'
+    - Eje X (tras coord_flip): ''. Eje Y: 'Renta neta media por hogar (€)'.
+    - Tema: theme_minimal() + theme(legend_position='none', figure_size=(10, 5)).
+    """
+    return get_ai_template(None, desc, data_boxplot_intramunicipal)
+
+@asset
+def boxplot_intramunicipal(context, prompt_boxplot_intramunicipal, data_boxplot_intramunicipal):
+    code = get_ai_code(context, prompt_boxplot_intramunicipal)
+    path = render_ia_viz(context, code, data_boxplot_intramunicipal,
+                         "plots/renta/boxplot_desigualdad_intramunicipal.png", height=10)
+    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
+
+
+# 11. Scatter — ocupaciones elementales vs renta
+@asset
+def data_scatter_elementales(ocupacion_clean, rentamedia_clean):
+    """% trabajadores en ocupaciones elementales vs renta neta por sección (2023). Para scatter."""
+    ocu = ocupacion_clean[ocupacion_clean['año'] == 2023]
+    total = ocu.groupby('geo_key')['num_casos'].sum().rename('total')
+    elem  = (
+        ocu[ocu['ocupacion'] == 'Ocupaciones elementales']
+        .groupby('geo_key')['num_casos'].sum().rename('elementales')
+    )
+    pct = (
+        pd.concat([total, elem], axis=1)
+        .assign(pct_elementales=lambda x: x['elementales'] / x['total'].replace(0, np.nan) * 100)
+        .dropna()
+        .reset_index()
+    )
+    renta = rentamedia_clean[
+        (rentamedia_clean['año'] == 2023) &
+        (rentamedia_clean['MEDIDAS_CODE'] == 'RENTA_NETA_MEDIA_HOGAR')
+    ][['geo_key', 'OBS_VALUE', 'municipio']].rename(columns={'OBS_VALUE': 'renta_neta'})
+    return pct.merge(renta, on='geo_key', how='inner')
+
+@asset
+def prompt_scatter_elementales(data_scatter_elementales):
+    desc = """
+    - Dataset: data_scatter_elementales
+    - Columnas: geo_key (str), total (float, trabajadores totales), elementales (float),
+      pct_elementales (float, 0-100), municipio (str), renta_neta (float, €)
+    - Geometría: bubble scatter.
+      geom_point(aes(x='pct_elementales', y='renta_neta', size='total'),
+                 color='#4575b4', alpha=0.35)
+      scale_size_continuous(range=(1, 10), name='Trabajadores')
+      geom_smooth(aes(x='pct_elementales', y='renta_neta'), method='lm',
+                  color='#d73027', size=1)
+    - NUNCA usar guide=False ni guide='none'. Para ocultar leyendas usar theme(legend_position='none').
+    - Título: 'A más trabajo elemental, menos renta: correlación por sección censal (2023)'
+    - Eje X: '% trabajadores en ocupaciones elementales'. Eje Y: 'Renta neta media por hogar (€)'.
+    - Tema: theme_minimal().
+    """
+    return get_ai_template(None, desc, data_scatter_elementales)
+
+@asset
+def scatter_elementales(context, prompt_scatter_elementales, data_scatter_elementales):
+    code = get_ai_code(context, prompt_scatter_elementales)
+    path = render_ia_viz(context, code, data_scatter_elementales,
+                         "plots/renta/scatter_elementales_renta.png")
+    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
+
+
+# 12. Grouped bar — fuentes de ingreso por quintil de renta
+@asset
+def data_ingresos_quintiles(ingresos_clean, rentamedia_clean):
+    """% medio de cada fuente de ingresos por quintil de renta (2023). Para grouped bar."""
+    renta_sec = (
+        rentamedia_clean[
+            (rentamedia_clean['año'] == 2023) &
+            (rentamedia_clean['MEDIDAS_CODE'] == 'RENTA_NETA_MEDIA_HOGAR')
+        ][['geo_key', 'OBS_VALUE']]
+        .drop_duplicates('geo_key')
+        .copy()
+    )
+    renta_sec['quintil'] = pd.qcut(
+        renta_sec['OBS_VALUE'], q=5,
+        labels=['Q1 (más pobre)', 'Q2', 'Q3', 'Q4', 'Q5 (más rico)']
+    )
+    ing = ingresos_clean[ingresos_clean['año'] == 2023]
+    merged = ing.merge(renta_sec[['geo_key', 'quintil']], on='geo_key', how='inner')
+    return (
+        merged.groupby(['quintil', 'MEDIDAS#es'], as_index=False)['OBS_VALUE']
+        .mean()
+        .rename(columns={'MEDIDAS#es': 'fuente', 'OBS_VALUE': 'pct'})
+    )
+
+@asset
+def prompt_ingresos_quintiles(data_ingresos_quintiles):
+    desc = """
+    - Dataset: data_ingresos_quintiles
+    - Columnas: quintil (str, 5 niveles de Q1 más pobre a Q5 más rico), fuente (str), pct (float, %)
+    - Geometría: grouped bar.
+      geom_col(aes(x='quintil', y='pct', fill='fuente'), position='dodge')
+    - Rotar etiquetas eje X 15°: theme(axis_text_x=element_text(angle=15, ha='right'))
+    - NUNCA usar guide=False ni guide='none'. Para ocultar leyendas usar theme(legend_position='none').
+    - Título: '¿De qué viven los más ricos y los más pobres? Fuentes de ingreso por quintil (2023)'
+    - Eje X: 'Quintil de renta'. Eje Y: '% medio de ingresos'. Fill legend: 'Fuente'.
+    - Tema: theme_minimal().
+    """
+    return get_ai_template(None, desc, data_ingresos_quintiles)
+
+@asset
+def grouped_bar_quintiles(context, prompt_ingresos_quintiles, data_ingresos_quintiles):
+    code = get_ai_code(context, prompt_ingresos_quintiles)
+    path = render_ia_viz(context, code, data_ingresos_quintiles,
+                         "plots/renta/grouped_bar_ingresos_quintiles.png", width=12)
+    return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
+
+
+# 13. Heatmap — renta por municipio y año
+@asset
+def data_heatmap_renta(rentamedia_clean):
+    """Renta media por municipio y año (2021-2023), municipios con los 3 años. Para heatmap."""
+    df = (
+        rentamedia_clean[rentamedia_clean['MEDIDAS_CODE'] == 'RENTA_NETA_MEDIA_HOGAR']
+        .groupby(['municipio', 'año'], as_index=False)['OBS_VALUE'].mean()
+        .rename(columns={'OBS_VALUE': 'renta_media'})
+    )
+    mun_completos = df.groupby('municipio')['año'].count()
+    mun_completos = mun_completos[mun_completos == 3].index
+    df = df[df['municipio'].isin(mun_completos)].copy()
+    orden = df[df['año'] == 2023].sort_values('renta_media')['municipio'].tolist()
+    df['municipio'] = pd.Categorical(df['municipio'], categories=orden, ordered=True)
+    return df.sort_values(['municipio', 'año']).reset_index(drop=True)
+
+@asset
+def prompt_heatmap_renta(data_heatmap_renta):
+    desc = """
+    - Dataset: data_heatmap_renta
+    - Columnas: municipio (str, categorical ordenado por renta 2023 asc), año (int), renta_media (float, €)
+    - Preprocesamiento: convertir año a str para que el eje X sea discreto.
+    - Geometría: heatmap de tiles.
+      geom_tile(aes(x='año', y='municipio', fill='renta_media'), color='white', size=0.3)
+    - scale_fill_gradient(low='#d73027', high='#1a9850', name='Renta (€)')
+    - NUNCA usar guide=False ni guide='none'. Para ocultar leyendas usar theme(legend_position='none').
+    - Título: 'Evolución de la renta por municipio: ¿se amplía la brecha? (2021–2023)'
+    - Eje X: ''. Eje Y: ''.
+    - Tema: theme_minimal() + theme(axis_text_y=element_text(size=7)).
+    """
+    return get_ai_template(None, desc, data_heatmap_renta)
+
+@asset
+def heatmap_renta(context, prompt_heatmap_renta, data_heatmap_renta):
+    code = get_ai_code(context, prompt_heatmap_renta)
+    path = render_ia_viz(context, code, data_heatmap_renta,
+                         "plots/renta/heatmap_renta_municipio.png", height=10)
     return Output(path, metadata={"code": MetadataValue.md(f"```python\n{code}\n```")})
