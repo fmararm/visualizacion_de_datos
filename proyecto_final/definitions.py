@@ -54,10 +54,17 @@ def watch_folder_sensor(context):
         # Usamos el timestamp como run_key para evitar ejecuciones duplicadas para el mismo estado.
         yield RunRequest(run_key=curr_mtime_str)
         context.update_cursor(curr_mtime_str)
+        
+
 
 defs = Definitions(
-    assets=load_assets_from_modules([lab_renta, interactive_map]),
-    asset_checks=load_asset_checks_from_modules([lab_renta_checks]),
+    
+    assets=load_assets_from_modules([lab_renta, 
+    interactive_map]),
+    asset_checks=load_asset_checks_from_modules(
+        [lab_renta_checks]),
     jobs=[all_assets_job],
+    
     sensors=[watch_folder_sensor],
+    
 )
