@@ -3,10 +3,9 @@ def generar_plot(df):
     top15['grupo'] = 'Top 15'
     bottom15 = df.nsmallest(15, 'renta_media').copy()
     bottom15['grupo'] = 'Bottom 15'
-    df_plot = pd.concat([top15, bottom15], ignore_index=True)
-    df_plot['renta_media'] = df_plot['renta_media'].astype(float)
+    df_plot = pd.concat([top15, bottom15])
     df_plot['municipio'] = df_plot['municipio'].astype(str)
-    df_plot['grupo'] = df_plot['grupo'].astype(str)
+    df_plot['renta_media'] = df_plot['renta_media'].astype(float)
 
     plot = (
         p9.ggplot(df_plot)
@@ -18,7 +17,7 @@ def generar_plot(df):
                 yend='reorder(municipio, renta_media)',
                 color='grupo'
             ),
-            size=0.6
+            size=0.8
         )
         + p9.geom_point(
             p9.aes(

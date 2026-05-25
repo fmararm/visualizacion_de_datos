@@ -139,10 +139,10 @@ def test_ocupacion_categorias(ocupacion_clean):
 def test_cobertura_municipios(data_renta_municipio):
     n = len(data_renta_municipio)
     return AssetCheckResult(
-        passed=bool(n >= 40),
+        passed=bool(n >= 30),
         metadata={
             "n_municipios": MetadataValue.int(n),
-            "description": "Al menos 40 de los 54 municipios de Tenerife deben tener datos de renta.",
+            "description": "Al menos 30 de los 31 municipios de Tenerife deben tener datos de renta.",
         }
     )
 
