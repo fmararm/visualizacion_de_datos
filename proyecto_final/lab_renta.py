@@ -206,11 +206,20 @@ def ingresos_clean(ingresos_load):
 
 @asset
 def data_renta_municipio(rentamedia_clean):
-    """Renta neta media por hogar, por municipio (2023). Para lollipop."""
+    """Renta neta media por hogar, por municipio de Tenerife (2023). Para lollipop."""
+    NO_TENERIFE = {
+        38002, 38003, 38021, 38036, 38049, 38050,  # La Gomera
+        38007, 38008, 38009, 38014, 38016, 38024,  # La Palma
+        38027, 38029, 38030, 38033, 38037, 38045,  # La Palma
+        38047, 38053,                               # La Palma
+        38013, 38048, 38901,                        # El Hierro
+    }
     df = rentamedia_clean[
         (rentamedia_clean['año'] == 2023) &
         (rentamedia_clean['MEDIDAS_CODE'] == 'RENTA_NETA_MEDIA_HOGAR')
-    ]
+    ].copy()
+    df['cod_municipio'] = df['geo_key'].str[:5].astype(int)
+    df = df[~df['cod_municipio'].isin(NO_TENERIFE)]
     return (
         df.groupby('municipio', as_index=False)['OBS_VALUE']
         .mean()

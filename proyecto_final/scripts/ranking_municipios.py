@@ -15,9 +15,9 @@ def generar_plot(df):
                 x=0,
                 xend='renta_media',
                 y='reorder(municipio, renta_media)',
-                yend='reorder(municipio, renta_media)'
+                yend='reorder(municipio, renta_media)',
+                color='grupo'
             ),
-            color='gray',
             size=0.6
         )
         + p9.geom_point(
@@ -28,6 +28,7 @@ def generar_plot(df):
             ),
             size=3
         )
+        + p9.scale_color_manual(values={'Bottom 15': '#b03a2e', 'Top 15': '#2166ac'})
         + p9.labs(
             title='Los municipios más ricos y más pobres de Tenerife (2023)',
             x='Renta neta media por hogar (€)',

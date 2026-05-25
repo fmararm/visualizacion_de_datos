@@ -178,20 +178,20 @@ if seccion == "Introducción":
     st.title("Dos Tenerifes")
     st.markdown(
         '<p class="section-intro">'
-        "Tenerife no es una isla. Son dos. Una acumula renta, empleo cualificado y "
-        "oportunidades y la otra sostiene la economía de servicio. Los datos del "
+        "La renta media de la sección censal más rica de Tenerife cuadruplica la de la más pobre, "
+        "y ambas están en Santa Cruz de Tenerife. Entre municipios, el más rico supera en más de "
+        "un 50% al más pobre. Los datos del "
         "<strong>Atlas de Distribución de Renta de los Hogares del INE (2021-2023)</strong> "
-        "permiten ver con precisión dónde está la línea que las separa, y confirmar "
-        "que esa línea no se ha movido."
+        "muestran que esa brecha no es una anomalía puntual: se reproduce con la misma estructura "
+        "en los tres años analizados."
         "</p>",
         unsafe_allow_html=True,
     )
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     col1.metric("Municipios analizados", "54")
     col2.metric("Años cubiertos", "2021 - 2023")
     col3.metric("Secciones censales", "681")
-    col4.metric("Ratio renta max/min", "3x")
 
     st.markdown("---")
     st.markdown("### Qué encontrarás aquí")
@@ -213,11 +213,10 @@ elif seccion == "La fractura de la renta":
     st.header("La fractura de la renta")
     st.markdown(
         '<p class="section-intro">'
-        "Hay municipios en Tenerife que triplican la renta de otros situados a menos "
-        "de 50 kilómetros. No es una anomalía estadística ni un efecto puntual de la "
-        "pandemia: es una estructura que los datos de tres años consecutivos reproducen "
-        "con precisión. La isla que vende igualdad de sol y playa es, en términos "
-        "económicos, profundamente asimétrica."
+        "El municipio más rico de Tenerife supera en más de un 50% la renta del más pobre. "
+        "Dentro de la misma ciudad, la sección censal más rica cuadruplica a la más pobre. "
+        "No es una anomalía estadística ni un efecto puntual de la pandemia: es una estructura "
+        "que los datos de tres años consecutivos reproducen con precisión."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -227,7 +226,7 @@ elif seccion == "La fractura de la renta":
         "plots/renta/lollipop_ranking_municipios.png",
         caption=(
             "Primeros y últimos 15 municipios de Tenerife ordenados por renta neta media "
-            "por hogar (2023). La distancia entre el primero y el último supera el factor 2. "
+            "por hogar (2023). El municipio más rico supera en más de un 50% al más pobre. "
             "Datos: rentamedia-sc-3.csv."
         ),
         insight=(
@@ -340,7 +339,7 @@ elif seccion == "Desigualdad interna":
             "El rango intercuartílico de Santa Cruz y La Laguna es el más amplio de toda la provincia. "
             "Datos: rentamedia-sc-3.csv.",
             "Santa Cruz de Tenerife tiene secciones censales con rentas superiores a 80.000 euros "
-            "por hogar y otras que no alcanzan los 20.000 euros. La misma ciudad, "
+            "por hogar y otras que rondan los 21.000 euros. La misma ciudad, "
             "dos realidades económicas que no se tocan."
         ),
         (
@@ -398,7 +397,6 @@ elif seccion == "Actividad y ocupación":
         "La etiqueta sectorial es la misma para quien dirige un hotel de lujo "
         "y para quien limpia sus habitaciones. Lo que los separa (la ocupación, "
         "la renta, el barrio donde viven) queda oculto bajo esa misma categoría. "
-        "Los datos de quintiles lo hacen visible."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -463,9 +461,9 @@ elif seccion == "Actividad y ocupación":
                 "Datos: rentamedia-sc-3.csv, ocupacion-sc-3.csv."
             ),
             insight=(
-                "Del Q1 al Q5, la categoría 'Directores y técnicos' pasa del 20% al 51%. "
-                "Las ocupaciones elementales (las peor remuneradas) concentran en el quintil "
-                "más pobre casi el doble de trabajadores que en el más rico. "
+                "Del Q1 al Q5, la categoría 'Directores y técnicos' pasa del 19% al 49%. "
+                "Las ocupaciones elementales concentran en el quintil más pobre casi el triple "
+                "de trabajadores que en el más rico (18% frente a 7%). "
                 "No es talento distribuido al azar: es el resultado acumulado del barrio "
                 "en que se nació, la educación recibida y el capital social heredado."
             ),
