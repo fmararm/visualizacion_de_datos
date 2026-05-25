@@ -97,7 +97,7 @@
 
 \section{Motivación}
 
-La provincia de Santa Cruz de Tenerife presenta una distribución de la renta desigual, ya que municipios turísticos y de servicios conviven con zonas de actividad agrícola o poca actividad económica cuya renta per cápita es significativamente inferior. Este proyecto aplica las técnicas de visualización de datos aprendidas en la asignatura para cuantificar esa desigualdad a través de datos oficiales del Instituto Nacional de Estadística (INE).
+La provincia de Santa Cruz de Tenerife presenta una distribución de la renta desigual, ya que municipios turísticos y de servicios conviven con zonas de actividad agrícola o poca actividad económica cuya renta per cápita es significativamente inferior. Este proyecto aplica las técnicas de visualización de datos aprendidas en la asignatura para cuantificar esa desigualdad a través de datos oficiales del Instituto Canario de Estadística (ISTAC).
 
 \section{Fuentes de datos}
 
@@ -115,7 +115,7 @@ Actividad económica & Número de trabajadores & 2023 & Municipio por sector \\
 Categoría de ocupación & Número de trabajadores & 2023 & Municipio, ocupación y sexo \\
 \bottomrule
 \end{tabular}
-\caption{Conjuntos de datos utilizados. Los cuatro proceden del INE y cubren la provincia de Santa Cruz de Tenerife (código INE: 38).}
+\caption{Conjuntos de datos utilizados. Los cuatro proceden del ISTAC y cubren la provincia de Santa Cruz de Tenerife (código INE: 38).}
 \end{table}
 
 \begin{itemize}
@@ -357,7 +357,7 @@ Mismo esquema que el anterior, pero la variable de agrupación es la categoría 
 El mapa es un mapa coroplético (choropleth) multicapa: cada polígono del territorio se colorea proporcionalmente al valor de una variable cuantitativa, y el usuario puede cambiar de capa mediante un control de capas. Los polígonos son las secciones censales de la provincia de Santa Cruz de Tenerife. Las tres capas disponibles son:
 
 \begin{itemize}
-  \item Renta neta media por hogar (euros), procedente del Atlas ADRH del INE (2023).
+  \item Renta neta media por hogar (euros), procedente de la Estadística de Distribución de Renta de los Hogares del ISTAC (2023).
   \item Porcentaje de ingresos procedentes de prestaciones por desempleo, calculado a partir del fichero de distribución de renta (2023).
   \item Porcentaje de trabajadores en el sector Servicios sobre el total de asalariados, calculado a partir del fichero de actividad económica por sección censal (2023).
 \end{itemize}
@@ -442,7 +442,7 @@ El proyecto adopta una arquitectura DataOps basada en Dagster para automatizar l
 El pipeline se estructura en cuatro capas:
 
 \begin{enumerate}
-  \item Carga (*\_load): lectura de los datos crudos desde la API del INE o desde ficheros CSV en caché.
+  \item Carga (*\_load): lectura de los datos crudos desde ficheros CSV descargados del ISTAC.
   \item Limpieza (*\_clean): normalización de tipos, filtrado de nulos y codificación de variables.
   \item Datos analíticos (data\_*): transformaciones específicas para cada gráfico (agrupaciones, pivotados, cálculos de quintiles, etc.).
   \item Visualizaciones (ranking\_municipios, hist\_renta, fuentes\_ingresos, ...): generación del archivo PNG o HTML final.

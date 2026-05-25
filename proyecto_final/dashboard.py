@@ -168,7 +168,7 @@ st.sidebar.markdown("---")
 st.sidebar.markdown(
     "**Proyecto final**  \n"
     "Visualización de Datos 2025-2026  \n"
-    "Fuente: INE, Atlas de Distribución de Renta de los Hogares"
+    "Fuente: ISTAC, Instituto Canario de Estadística"
 )
 
 # ===========================================================================
@@ -181,7 +181,7 @@ if seccion == "Introducción":
         "La renta media de la sección censal más rica de Tenerife cuadruplica la de la más pobre, "
         "y ambas están en Santa Cruz de Tenerife. Entre municipios, el más rico supera en más de "
         "un 50% al más pobre. Los datos del "
-        "<strong>Atlas de Distribución de Renta de los Hogares del INE (2021-2023)</strong> "
+        "<strong>Estadística de Distribución de Renta de los Hogares del ISTAC (2021-2023)</strong> "
         "muestran que esa brecha no es una anomalía puntual: se reproduce con la misma estructura "
         "en los tres años analizados."
         "</p>",
